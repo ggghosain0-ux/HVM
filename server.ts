@@ -6,8 +6,8 @@ import fs from 'fs';
 import https from 'https';
 
 const app = express();
-const PORT = 3000;
-const PYTHON_PORT = 5000;
+const PORT = parseInt(process.env.PORT || '3000', 10);
+const PYTHON_PORT = parseInt(process.env.PYTHON_PORT || '5000', 10);
 
 console.log('Spawning Python Flask backend on port', PYTHON_PORT);
 
@@ -68,10 +68,28 @@ function downloadGetPip(): Promise<string> {
 async function prepareEnvironment() {
   fs.appendFileSync(path.join(process.cwd(), 'python.log'), '\n--- Preparing Python Environment ---\n');
   
+  // Resolve Python binary
+  let pythonBin = 'python3';
+  const venvPaths = [
+    path.join(process.cwd(), 'venv', 'bin', 'python3'),
+    path.join(process.cwd(), 'venv', 'bin', 'python'),
+    path.join(process.cwd(), 'HVM-V7-main', 'venv', 'bin', 'python3'),
+    path.join(process.cwd(), 'HVM-V7-main', 'venv', 'bin', 'python'),
+    path.join(process.cwd(), 'venv', 'Scripts', 'python.exe'),
+  ];
+  for (const p of venvPaths) {
+    if (fs.existsSync(p)) {
+      pythonBin = p;
+      console.log(`Using Python virtual environment: ${pythonBin}`);
+      fs.appendFileSync(path.join(process.cwd(), 'python.log'), `Using Python virtual environment: ${pythonBin}\n`);
+      break;
+    }
+  }
+
   // Check if main dependencies are already satisfied
   let needsInstall = false;
   try {
-    execSync('python3 -c "import requests, flask, flask_socketio, paramiko, hypercorn, PIL, cryptography"', { stdio: 'ignore' });
+    execSync(`"${pythonBin}" -c "import requests, flask, flask_socketio, paramiko, hypercorn, PIL, cryptography"`, { stdio: 'ignore' });
     console.log('Python dependencies are already satisfied. Skipping installation.');
     fs.appendFileSync(path.join(process.cwd(), 'python.log'), 'Python dependencies already satisfied. Skipping installation.\n');
   } catch (e) {
@@ -82,7 +100,7 @@ async function prepareEnvironment() {
     // 1. Ensure pip is installed
     try {
       console.log('Ensuring pip is installed via ensurepip...');
-      execSync('python3 -m ensurepip --default-pip', { encoding: 'utf-8' });
+      execSync(`"${pythonBin}" -m ensurepip --default-pip`, { encoding: 'utf-8' });
       console.log('ensurepip succeeded');
       fs.appendFileSync(path.join(process.cwd(), 'python.log'), 'ensurepip succeeded\n');
     } catch (err: any) {
@@ -91,7 +109,7 @@ async function prepareEnvironment() {
       try {
         const getPipPath = await downloadGetPip();
         console.log('Downloaded get-pip.py. Installing pip...');
-        const out = execSync(`python3 "${getPipPath}" --break-system-packages`, { encoding: 'utf-8' });
+        const out = execSync(`"${pythonBin}" "${getPipPath}" --break-system-packages`, { encoding: 'utf-8' });
         fs.appendFileSync(path.join(process.cwd(), 'python.log'), `get-pip.py installation output: ${out}\n`);
         // Clean up
         fs.unlinkSync(getPipPath);
@@ -106,12 +124,12 @@ async function prepareEnvironment() {
       console.log('Installing Python dependencies from HVM-V7-main/requirements.txt...');
       fs.appendFileSync(path.join(process.cwd(), 'python.log'), 'Installing requirements.txt...\n');
       try {
-        const installOut = execSync('python3 -m pip install -r HVM-V7-main/requirements.txt --break-system-packages', { encoding: 'utf-8' });
+        const installOut = execSync(`"${pythonBin}" -m pip install -r HVM-V7-main/requirements.txt --break-system-packages`, { encoding: 'utf-8' });
         console.log(installOut);
         fs.appendFileSync(path.join(process.cwd(), 'python.log'), installOut + '\n');
       } catch (err: any) {
         console.log('Retrying requirements install without --break-system-packages...');
-        const installOut = execSync('python3 -m pip install -r HVM-V7-main/requirements.txt', { encoding: 'utf-8' });
+        const installOut = execSync(`"${pythonBin}" -m pip install -r HVM-V7-main/requirements.txt`, { encoding: 'utf-8' });
         console.log(installOut);
         fs.appendFileSync(path.join(process.cwd(), 'python.log'), installOut + '\n');
       }
@@ -122,8 +140,8 @@ async function prepareEnvironment() {
     }
   }
   // 3. Spawn Python backend
-  console.log('Spawning Python Flask backend...');
-  const pythonProcess = spawn('python3', [path.join(process.cwd(), 'HVM-V7-main', 'hvm.py')], {
+  console.log(`Spawning Python Flask backend via ${pythonBin}...`);
+  const pythonProcess = spawn(pythonBin, [path.join(process.cwd(), 'HVM-V7-main', 'hvm.py')], {
     env: {
       ...process.env,
       PORT: String(PYTHON_PORT),
