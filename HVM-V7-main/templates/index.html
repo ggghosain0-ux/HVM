@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome to {{ panel_name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-16 animate-[fadeIn_0.5s_ease-out]">
+    
+    <!-- Hero / Intro Block -->
+    <div class="relative bg-slate-900/40 border border-white/5 rounded-3xl p-8 md:p-12 shadow-2xl overflow-hidden backdrop-blur-md">
+        <!-- Abstract gradient decorative background circles -->
+        <div class="absolute -right-32 -top-32 w-96 h-96 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none"></div>
+        <div class="absolute -left-32 -bottom-32 w-96 h-96 rounded-full bg-indigo-500/5 blur-3xl pointer-events-none"></div>
+        
+        <div class="relative z-10 grid grid-cols-1 lg:grid-cols-2 items-center gap-10">
+            <div class="space-y-6">
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-[10px] font-bold text-indigo-400 font-display tracking-wider uppercase">
+                    <i class="fas fa-sparkles animate-pulse"></i>
+                    <span>Next-Gen Cloud Orchestration</span>
+                </div>
+                
+                <h1 class="text-3xl md:text-5xl font-black font-display text-white tracking-tight leading-[1.1]">
+                    High-Performance <br>
+                    <span class="text-indigo-400">VPS Management</span>
+                </h1>
+                
+                <p class="text-sm text-slate-400 leading-relaxed max-w-lg font-medium">
+                    Provision, manage, and scale LXC virtual machines seamlessly. Experience absolute container efficiency with integrated port gateways, cluster metrics, and live shell telemetry.
+                </p>
+                
+                <div class="flex flex-wrap items-center gap-3">
+                    {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('dashboard') }}" class="px-5 py-3 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/15 hover:shadow-indigo-600/25 transition flex items-center gap-2 cursor-pointer">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Go to Dashboard</span>
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('register') }}" class="px-5 py-3 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/15 hover:shadow-indigo-600/25 transition flex items-center gap-2 cursor-pointer">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Get Started</span>
+                    </a>
+                    <a href="{{ url_for('login') }}" class="px-5 py-3 text-xs font-bold rounded-xl border border-white/5 hover:border-white/10 text-slate-300 hover:text-white transition flex items-center gap-2 bg-slate-800/20 hover:bg-slate-800/40">
+                        <i class="fas fa-sign-in-alt"></i>
+                        <span>Sign In</span>
+                    </a>
+                    {% endif %}
+                </div>
+
+                <!-- Stats indicators row -->
+                <div class="grid grid-cols-3 gap-4 pt-6 border-t border-white/5 max-w-md">
+                    <div class="space-y-1">
+                        <h4 class="text-2xl font-bold font-mono text-indigo-400">100%</h4>
+                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-display">Containerized</p>
+                    </div>
+                    <div class="space-y-1">
+                        <h4 class="text-2xl font-bold font-mono text-indigo-400">LXC</h4>
+                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-display">Native Stack</p>
+                    </div>
+                    <div class="space-y-1">
+                        <h4 class="text-2xl font-bold font-mono text-indigo-400">Multi</h4>
+                        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-display">Node Cluster</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Mock Preview Frame -->
+            <div class="hidden lg:block relative">
+                <div class="bg-slate-950/60 border border-white/5 rounded-2xl p-5 shadow-2xl relative overflow-hidden transform rotate-2 hover:rotate-0 transition duration-500 backdrop-blur-md">
+                    <!-- Top Window controls bar -->
+                    <div class="flex items-center gap-1.5 pb-4 border-b border-white/5 mb-4">
+                        <div class="w-2.5 h-2.5 rounded-full bg-rose-500/40"></div>
+                        <div class="w-2.5 h-2.5 rounded-full bg-amber-500/40"></div>
+                        <div class="w-2.5 h-2.5 rounded-full bg-emerald-500/40"></div>
+                        <span class="text-[10px] font-bold text-slate-500 font-mono ml-2">dicot-panel-mock.sh</span>
+                    </div>
+
+                    <div class="space-y-4 font-mono text-[10px] text-slate-400">
+                        <div class="flex items-center gap-2.5 bg-white/[0.01] border border-white/5 p-2.5 rounded-xl">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center">
+                                <i class="fas fa-server"></i>
+                            </div>
+                            <div class="space-y-1">
+                                <div class="h-2.5 w-24 bg-slate-800 rounded-full"></div>
+                                <div class="h-2 w-32 bg-slate-800/50 rounded-full"></div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2.5">
+                            <div class="bg-white/[0.01] border border-white/5 p-3 rounded-xl space-y-1.5">
+                                <span class="text-slate-500">CPU Usage</span>
+                                <div class="w-full h-1.5 rounded-full bg-slate-900 overflow-hidden"><div class="h-full w-2/5 bg-indigo-500 rounded-full"></div></div>
+                            </div>
+                            <div class="bg-white/[0.01] border border-white/5 p-3 rounded-xl space-y-1.5">
+                                <span class="text-slate-500">Memory</span>
+                                <div class="w-full h-1.5 rounded-full bg-slate-900 overflow-hidden"><div class="h-full w-3/5 bg-indigo-500 rounded-full"></div></div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white/[0.01] border border-white/5 p-3.5 rounded-xl space-y-2">
+                            <span class="text-slate-500">Cluster Status console</span>
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-1.5 text-[9px]"><span class="text-emerald-500">●</span> <span>node-01 online [LXC]</span></div>
+                                <div class="flex items-center gap-1.5 text-[9px]"><span class="text-emerald-500">●</span> <span>node-02 online [LXC]</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cluster Features section -->
+    <div class="space-y-8">
+        <div class="text-center space-y-1.5 max-w-sm mx-auto">
+            <h2 class="text-xl font-bold font-display text-white">Engineered for absolute performance</h2>
+            <p class="text-xs text-slate-400">An entire VPS ecosystem running on low-overhead, container-native LXC hypervisors.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Fast Deploy feature -->
+            <div class="bg-slate-900/40 border border-white/5 rounded-2xl p-6 shadow-xl space-y-4 relative overflow-hidden backdrop-blur-md hover:border-indigo-500/20 transition duration-300">
+                <div class="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center">
+                    <i class="fas fa-bolt text-lg"></i>
+                </div>
+                <div class="space-y-1">
+                    <h3 class="text-sm font-bold text-slate-200">Instant Deployments</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed font-medium">Create, configure, and boot LXC containers instantly. Skip long virtual machine overhead boot durations completely.</p>
+                </div>
+            </div>
+
+            <!-- Isolated Container architecture feature -->
+            <div class="bg-slate-900/40 border border-white/5 rounded-2xl p-6 shadow-xl space-y-4 relative overflow-hidden backdrop-blur-md hover:border-indigo-500/20 transition duration-300">
+                <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
+                    <i class="fas fa-shield-alt text-lg"></i>
+                </div>
+                <div class="space-y-1">
+                    <h3 class="text-sm font-bold text-slate-200">Isolated & Secure</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed font-medium">Strict resource limits, control loops, custom whitelists, and account suspension policies safeguard nodes against overflow.</p>
+                </div>
+            </div>
+
+            <!-- Intelligent Port binding forwarding feature -->
+            <div class="bg-slate-900/40 border border-white/5 rounded-2xl p-6 shadow-xl space-y-4 relative overflow-hidden backdrop-blur-md hover:border-indigo-500/20 transition duration-300">
+                <div class="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center">
+                    <i class="fas fa-network-wired text-lg"></i>
+                </div>
+                <div class="space-y-1">
+                    <h3 class="text-sm font-bold text-slate-200">Gateways & Ports</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed font-medium">Easily map guest container ports to public internet addresses. Supports fully customizable TCP/UDP packet quotas.</p>
+                </div>
+            </div>
+
+            <!-- Monitoring telemetry feature -->
+            <div class="bg-slate-900/40 border border-white/5 rounded-2xl p-6 shadow-xl space-y-4 relative overflow-hidden backdrop-blur-md hover:border-indigo-500/20 transition duration-300">
+                <div class="w-12 h-12 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center">
+                    <i class="fas fa-chart-line text-lg"></i>
+                </div>
+                <div class="space-y-1">
+                    <h3 class="text-sm font-bold text-slate-200">Real-Time telemetry</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed font-medium">Track memory allocation, CPU thread utilization, and active disc read metrics through clean live charts.</p>
+                </div>
+            </div>
+
+            <!-- Remote interactive Shell Terminal feature -->
+            <div class="bg-slate-900/40 border border-white/5 rounded-2xl p-6 shadow-xl space-y-4 relative overflow-hidden backdrop-blur-md hover:border-indigo-500/20 transition duration-300">
+                <div class="w-12 h-12 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20 flex items-center justify-center">
+                    <i class="fas fa-terminal text-lg"></i>
+                </div>
+                <div class="space-y-1">
+                    <h3 class="text-sm font-bold text-slate-200">Embedded Web SSH</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed font-medium">Direct interactive web console access. Run bash utilities directly from any browser tab safely.</p>
+                </div>
+            </div>
+
+            <!-- Multi-Node Clustering features -->
+            <div class="bg-slate-900/40 border border-white/5 rounded-2xl p-6 shadow-xl space-y-4 relative overflow-hidden backdrop-blur-md hover:border-indigo-500/20 transition duration-300">
+                <div class="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center">
+                    <i class="fas fa-cloud text-lg"></i>
+                </div>
+                <div class="space-y-1">
+                    <h3 class="text-sm font-bold text-slate-200">Cluster Federation</h3>
+                    <p class="text-xs text-slate-400 leading-relaxed font-medium">Deploy and govern guest LXC containers across federated cluster nodes from a single dashboard control panel.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CTA Panel -->
+    <div class="max-w-2xl mx-auto py-4">
+        <div class="bg-slate-900/40 border border-white/5 rounded-2xl p-8 text-center shadow-2xl relative overflow-hidden backdrop-blur-md">
+            <div class="absolute -right-32 -bottom-32 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl"></div>
+            
+            <div class="relative z-10 space-y-5">
+                <h2 class="text-lg font-bold font-display text-white">Join high-performance hosting today</h2>
+                <p class="text-xs text-slate-400 leading-relaxed max-w-sm mx-auto font-medium">Start deploying lightweight guest instances across multiple node clusters inside a premium glass management workspace.</p>
+                
+                {% if current_user.is_authenticated %}
+                <div class="flex justify-center">
+                    <a href="{{ url_for('dashboard') }}" class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/15 transition flex items-center gap-1.5 cursor-pointer">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Return to dashboard</span>
+                    </a>
+                </div>
+                {% else %}
+                <div class="flex items-center justify-center gap-2.5 flex-wrap">
+                    <a href="{{ url_for('register') }}" class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/15 transition flex items-center gap-1.5 cursor-pointer">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Register Account</span>
+                    </a>
+                    <a href="{{ url_for('login') }}" class="px-5 py-2.5 text-xs font-bold rounded-xl border border-white/5 hover:border-white/10 text-slate-300 hover:text-white transition flex items-center gap-1.5">
+                        <i class="fas fa-sign-in-alt"></i>
+                        <span>Sign In</span>
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

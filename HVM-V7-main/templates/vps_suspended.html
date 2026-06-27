@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}VPS Suspended - {{ panel_name }}{% endblock %}
+
+{% block header_title %}Access Restricted{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-center min-h-[60vh] p-4 animate-[fadeIn_0.4s_ease-out]">
+    <div class="bg-slate-900/40 border border-white/5 rounded-3xl p-8 max-w-lg w-full text-center shadow-2xl relative overflow-hidden backdrop-blur-md">
+        <!-- Ambient red/orange glow -->
+        <div class="absolute -right-24 -top-24 w-64 h-64 rounded-full bg-rose-500/5 blur-3xl pointer-events-none"></div>
+        <div class="absolute -left-24 -bottom-24 w-64 h-64 rounded-full bg-amber-500/5 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 space-y-6">
+            <!-- Alert Ban Icon -->
+            <div class="w-20 h-20 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center mx-auto shadow-lg shadow-amber-500/5 animate-[pulse_2s_infinite]">
+                <i class="fas fa-ban text-3xl"></i>
+            </div>
+            
+            <div class="space-y-1.5">
+                <h2 class="text-xl font-bold font-display text-white">Instance Suspended</h2>
+                <p class="text-xs text-slate-400">This container instance has been restricted from performing active tasks.</p>
+            </div>
+            
+            <div class="rounded-2xl border border-amber-500/15 bg-amber-500/5 p-4 text-left space-y-1">
+                <span class="text-[10px] font-bold text-amber-400 uppercase tracking-wider font-display flex items-center gap-1.5">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>Suspension Reason</span>
+                </span>
+                <p class="text-xs text-amber-400/90 leading-relaxed font-mono">
+                    {{ vps.suspended_reason or 'No reason provided' }}
+                </p>
+            </div>
+            
+            {% if current_user.is_admin %}
+            <div class="pt-5 border-t border-white/5 space-y-4">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider font-display">Administrative Overrides</h3>
+                <div class="flex flex-wrap gap-2 justify-center">
+                    <button class="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/15 hover:shadow-emerald-600/25 transition cursor-pointer flex items-center gap-1.5" onclick="unsuspendVPS()">
+                        <i class="fas fa-check"></i>
+                        <span>Unsuspend Instance</span>
+                    </button>
+                    <a href="{{ url_for('admin_vps_edit', vps_id=vps.id) }}" class="px-4 py-2 text-xs font-bold rounded-xl border border-white/5 hover:border-white/10 text-slate-300 hover:text-white transition flex items-center gap-1.5">
+                        <i class="fas fa-edit"></i>
+                        <span>Edit VPS</span>
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <div class="pt-4 space-y-4">
+                <p class="text-xs text-slate-400">If you believe this is an error, please contact support or your account administrator to lift the restriction.</p>
+                <div class="flex justify-center">
+                    <a href="{{ url_for('vps_list') }}" class="px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/15 hover:shadow-indigo-600/25 transition flex items-center gap-1.5">
+                        <i class="fas fa-arrow-left"></i>
+                        <span>Back to VPS List</span>
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function unsuspendVPS() {
+        if (!confirm('Are you sure you want to unsuspend this VPS?')) {
+            return;
+        }
+        
+        showLoading();
+        
+        try {
+            const response = await fetch('/admin/vps/{{ vps.id }}/unsuspend', {
+                method: 'POST'
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showToast('VPS unsuspended successfully', 'success');
+                setTimeout(() => window.location.href = "{{ url_for('vps_detail', vps_id=vps.id) }}", 1500);
+            } else {
+                showToast(result.error || 'Failed to unsuspend VPS', 'danger');
+            }
+        } catch (error) {
+            console.error('Unsuspend error:', error);
+            showToast('Network error: ' + error.message, 'danger');
+        } finally {
+            hideLoading();
+        }
+    }
+</script>
+{% endblock %}

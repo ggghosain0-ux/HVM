@@ -1,0 +1,6 @@
+{
+  "name": "DICOT PANEL",
+  "description": "High-Performance VPS Management and Virtualization Panel",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

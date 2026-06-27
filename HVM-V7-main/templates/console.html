@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ panel_name }} · VPS Console</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Xterm.js for terminal emulation -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" />
+    <!-- Socket.IO client -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="font-sans antialiased bg-[#020617] h-screen overflow-hidden flex flex-col relative select-none">
+
+    <!-- SSH connection form overlay -->
+    <div id="sshOverlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-50 transition-all duration-300">
+        <div class="bg-slate-900/50 border border-white/5 rounded-3xl p-8 max-w-md w-full shadow-2xl relative overflow-hidden backdrop-blur-lg animate-[scaleIn_0.3s_ease-out]">
+            <!-- Glowing mesh backdrops -->
+            <div class="absolute -right-24 -top-24 w-64 h-64 rounded-full bg-indigo-500/5 blur-3xl pointer-events-none"></div>
+            
+            <div class="relative z-10 space-y-6">
+                <!-- Title block -->
+                <div class="text-center space-y-2">
+                    <div class="w-14 h-14 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center mx-auto">
+                        <i class="fa-solid fa-terminal text-xl"></i>
+                    </div>
+                    <div class="space-y-0.5">
+                        <h2 class="text-base font-bold font-display text-white">Establish SSH Session</h2>
+                        <p class="text-[11px] text-slate-400">Provide credentials to proxy local guest terminal</p>
+                    </div>
+                </div>
+
+                <!-- Fields -->
+                <div class="space-y-4">
+                    <div class="space-y-1.5">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider font-display">Host / IP</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                                <i class="fa-solid fa-network-wired text-[11px]"></i>
+                            </div>
+                            <input type="text" id="sshHost" value="{{ vps_ip or '' }}" placeholder="127.0.0.1" class="w-full pl-9 pr-3 py-2 bg-slate-950 border border-white/5 rounded-xl text-xs font-mono text-slate-200 focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 outline-none transition">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-1.5">
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider font-display">SSH Port</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                                    <i class="fa-regular fa-plug text-[11px]"></i>
+                                </div>
+                                <input type="number" id="sshPort" value="22" min="1" max="65535" class="w-full pl-9 pr-3 py-2 bg-slate-950 border border-white/5 rounded-xl text-xs font-mono text-slate-200 focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 outline-none transition">
+                            </div>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider font-display">Username</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                                    <i class="fa-regular fa-user text-[11px]"></i>
+                                </div>
+                                <input type="text" id="sshUser" value="root" class="w-full pl-9 pr-3 py-2 bg-slate-950 border border-white/5 rounded-xl text-xs font-mono text-slate-200 focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 outline-none transition">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider font-display">Password / Secret</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                                <i class="fa-solid fa-lock text-[11px]"></i>
+                            </div>
+                            <input type="password" id="sshPass" placeholder="••••••••" class="w-full pl-9 pr-3 py-2 bg-slate-950 border border-white/5 rounded-xl text-xs font-mono text-slate-200 focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 outline-none transition">
+                        </div>
+                    </div>
+                </div>
+
+                <button id="connectBtn" class="w-full py-3 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/15 hover:shadow-indigo-600/25 transition flex items-center justify-center gap-1.5 cursor-pointer">
+                    <i class="fa-regular fa-paper-plane text-[10px]"></i>
+                    <span>Connect Terminal</span>
+                </button>
+
+                <div class="p-3 bg-slate-950/60 border border-white/5 rounded-xl flex items-start gap-2.5">
+                    <i class="fa-regular fa-circle-info text-indigo-400 text-xs mt-0.5"></i>
+                    <p class="text-[10px] text-slate-400 leading-normal font-medium">Session data is kept strictly inside temporary server thread structures. Credentials are never written to disk.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header Section -->
+    <header class="bg-slate-900/50 border-b border-white/5 px-6 py-4 flex items-center justify-between backdrop-blur-md shrink-0 relative z-10 shadow-lg">
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2.5 px-3 py-1.5 bg-slate-950 border border-white/5 rounded-xl text-xs font-bold text-slate-200 font-display shadow-inner">
+                <i class="fa-solid fa-cube text-indigo-400"></i>
+                <span>{{ vps.container_name }}</span>
+                <span class="text-[10px] px-1.5 py-0.5 bg-indigo-500/10 border border-indigo-500/20 rounded text-indigo-400 uppercase font-mono tracking-wide">{{ vps.os_version }}</span>
+            </div>
+
+            <!-- Connection Status -->
+            <div id="connStatus" class="flex items-center gap-2 px-3 py-1.5 bg-slate-950 border border-white/5 rounded-xl text-xs font-semibold text-slate-400">
+                <span id="statusLed" class="w-2 h-2 rounded-full bg-slate-600 transition"></span>
+                <span id="statusText">Connecting...</span>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex items-center gap-2">
+            <button id="fullscreenBtn" class="w-8 h-8 rounded-lg border border-white/5 hover:border-white/10 bg-slate-950 hover:bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer" title="Toggle Fullscreen (F11)">
+                <i class="fa-regular fa-window-maximize text-xs"></i>
+            </button>
+            <button id="reconnectBtn" class="w-8 h-8 rounded-lg border border-white/5 hover:border-white/10 bg-slate-950 hover:bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer" title="Reconnect">
+                <i class="fa-solid fa-rotate-right text-xs"></i>
+            </button>
+            <button id="exitBtn" class="px-3.5 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/15 hover:border-rose-500/30 transition text-xs font-bold flex items-center gap-1.5 cursor-pointer" title="Exit Console">
+                <i class="fa-regular fa-circle-xmark"></i>
+                <span>Exit</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main terminal console arena -->
+    <main id="terminal-container" class="flex-1 p-3 bg-slate-950 relative overflow-hidden">
+        <!-- Absolute top subtle shadow fade -->
+        <div class="absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-slate-950 to-transparent pointer-events-none z-10"></div>
+    </main>
+
+    <!-- Footer Controls Bar -->
+    <footer class="bg-slate-900/50 border-t border-white/5 px-6 py-3.5 text-[10px] text-slate-500 flex flex-wrap items-center gap-5 justify-between font-mono">
+        <div class="flex items-center gap-4">
+            <span class="flex items-center gap-1.5"><i class="fa-regular fa-keyboard text-indigo-400"></i> Ctrl+C / Ctrl+Z works natively</span>
+            <span class="flex items-center gap-1.5"><i class="fa-regular fa-clipboard text-indigo-400"></i> Paste: Ctrl+Shift+V or right-click</span>
+        </div>
+        <span class="flex items-center gap-1.5"><i class="fa-regular fa-circle-exclamation text-indigo-400 animate-pulse"></i> Terminating session does not power off VPS guest</span>
+    </footer>
+
+    <!-- scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+
+    <script>
+        (function() {
+            const vpsId = {{ vps.id }};
+            const socket = io(window.location.origin, {
+                transports: ['websocket', 'polling'],
+                path: '/socket.io'
+            });
+
+            // Xterm terminal
+            const term = new Terminal({
+                cursorBlink: true,
+                cursorStyle: 'block',
+                fontSize: 13,
+                fontFamily: 'JetBrains Mono, Fira Code, monospace',
+                theme: {
+                    background: '#020617',
+                    foreground: '#cbd5e1',
+                    cursor: '#6366f1',
+                    selectionBackground: 'rgba(99, 102, 241, 0.3)',
+                    black: '#0f172a',
+                    red: '#ef4444',
+                    green: '#10b981',
+                    yellow: '#f59e0b',
+                    blue: '#3b82f6',
+                    magenta: '#a855f7',
+                    cyan: '#06b6d4',
+                    white: '#f1f5f9',
+                },
+                scrollback: 5000,
+                tabStopWidth: 4,
+            });
+
+            const fitAddon = new FitAddon.FitAddon();
+            term.loadAddon(fitAddon);
+
+            // DOM elements
+            const overlay = document.getElementById('sshOverlay');
+            const statusLed = document.getElementById('statusLed');
+            const statusText = document.getElementById('statusText');
+            const connectBtn = document.getElementById('connectBtn');
+            const sshHost = document.getElementById('sshHost');
+            const sshPort = document.getElementById('sshPort');
+            const sshUser = document.getElementById('sshUser');
+            const sshPass = document.getElementById('sshPass');
+            const reconnectBtn = document.getElementById('reconnectBtn');
+            const exitBtn = document.getElementById('exitBtn');
+            const fullscreenBtn = document.getElementById('fullscreenBtn');
+            const terminalContainer = document.getElementById('terminal-container');
+
+            let connected = false;
+            let connecting = false;
+            let connectionInfo = null;
+
+            function setStatus(state, msg) {
+                statusLed.className = 'w-2 h-2 rounded-full transition';
+                if (state === 'connected') {
+                    statusLed.classList.add('bg-emerald-500', 'shadow-[0_0_10px_rgba(16,185,129,0.5)]');
+                    statusText.className = 'text-emerald-400 font-semibold';
+                    statusText.innerText = msg || 'Connected';
+                } else if (state === 'connecting') {
+                    statusLed.classList.add('bg-amber-500', 'animate-pulse');
+                    statusText.className = 'text-amber-400 font-semibold';
+                    statusText.innerText = msg || 'Connecting...';
+                } else if (state === 'disconnected') {
+                    statusLed.classList.add('bg-rose-500');
+                    statusText.className = 'text-rose-400 font-semibold';
+                    statusText.innerText = msg || 'Disconnected';
+                }
+            }
+
+            function openTerminal() {
+                term.open(terminalContainer);
+                fitAddon.fit();
+                term.focus();
+            }
+
+            openTerminal();
+
+            async function fetchConnectionDetails() {
+                try {
+                    setStatus('connecting', 'Preparing SSH handshake...');
+                    term.writeln('\x1b[36m[ Querying remote management proxy for active key bindings... ]\x1b[0m\r\n');
+                    
+                    const response = await fetch(`/vps/${vpsId}/console/connect`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        connectionInfo = data.connection;
+                        
+                        sshHost.value = connectionInfo.host;
+                        sshPort.value = connectionInfo.port;
+                        sshUser.value = connectionInfo.username;
+                        sshPass.value = connectionInfo.password;
+                        
+                        term.writeln('\x1b[32m✓ Node credentials decrypted from keyring successfully\x1b[0m');
+                        if (data.port_created) {
+                            term.writeln('\x1b[33m✓ Automatic hypervisor port-forward lease updated\x1b[0m');
+                        }
+                        term.writeln('\x1b[36m✓ Secure guest shell access granted\x1b[0m');
+                        term.writeln('\r\n\x1b[1mHandshake established! Initializing socket connection...\x1b[0m\r\n');
+                        
+                        setStatus('disconnected', 'Handshake ready');
+                        
+                        setTimeout(() => {
+                            if (!connected && !connecting) {
+                                term.writeln('\x1b[36m[ Auto-connecting in 3 seconds... Press any key to abort ]\x1b[0m\r\n');
+                                let autoConnectTimer = setTimeout(() => {
+                                    initiateConnection();
+                                }, 3000);
+                                
+                                const cancelAutoConnect = () => {
+                                    clearTimeout(autoConnectTimer);
+                                    term.writeln('\x1b[33m[ Handshake aborted. Form unlocked. ]\x1b[0m\r\n');
+                                    term.off('key', cancelAutoConnect);
+                                };
+                                term.on('key', cancelAutoConnect);
+                            }
+                        }, 1000);
+                        
+                    } else {
+                        term.writeln('\x1b[31m✗ Handshake negotiation rejected: ' + data.error + '\x1b[0m\r\n');
+                        term.writeln('\x1b[33mUnlock prompt manual input required.\x1b[0m\r\n');
+                        setStatus('disconnected', 'Manual access required');
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch connection details:', error);
+                    term.writeln('\x1b[31m✗ Network cluster transaction failure: ' + error.message + '\x1b[0m\r\n');
+                    term.writeln('\x1b[33mUnlock prompt manual input required.\x1b[0m\r\n');
+                    setStatus('disconnected', 'Network fail');
+                }
+            }
+
+            fetchConnectionDetails();
+
+            socket.on('connect', () => {
+                console.log('Socket transport activated');
+            });
+
+            socket.on('ssh_connected', (data) => {
+                connecting = false;
+                connected = true;
+                overlay.classList.add('hidden');
+                setStatus('connected', `SSH root@${data.host}:${data.port}`);
+                term.clear();
+                term.writeln('\x1b[1;36m╔═══════════════════════════════════════════════════════════╗\x1b[0m');
+                term.writeln('\x1b[1;36m║   PROXIED TERMINAL ACTIVE: ' + '{{ vps.container_name }}'.padEnd(31) + '║\x1b[0m');
+                term.writeln('\x1b[1;36m╚═══════════════════════════════════════════════════════════╝\x1b[0m\r\n');
+                term.focus();
+            });
+
+            socket.on('ssh_output', (data) => {
+                term.write(data);
+            });
+
+            socket.on('ssh_error', (err) => {
+                connecting = false;
+                connected = false;
+                setStatus('disconnected', 'SSH Failed');
+                overlay.classList.remove('hidden');
+                term.writeln('\r\n\x1b[1;31m╔═══════════════════════════════════════════════════════════╗\x1b[0m');
+                term.writeln('\x1b[1;31m║                 AUTHENTICATION / KEY ERROR                ║\x1b[0m');
+                term.writeln('\x1b[1;31m╚═══════════════════════════════════════════════════════════╝\x1b[0m');
+                term.writeln('\r\n\x1b[31m' + (err.error || 'The remote guest container refused the session keys.') + '\x1b[0m');
+            });
+
+            socket.on('ssh_disconnected', () => {
+                connected = false;
+                connecting = false;
+                setStatus('disconnected', 'Disconnected');
+                overlay.classList.remove('hidden');
+                term.writeln('\r\n\x1b[33m╔═══════════════════════════════════════════════════════════╗\x1b[0m');
+                term.writeln('\x1b[33m║               LXC Session Closed by Host                  ║\x1b[0m');
+                term.writeln('\x1b[33m╚═══════════════════════════════════════════════════════════╝\x1b[0m\r\n');
+            });
+
+            socket.on('disconnect', () => {
+                if (connected) {
+                    connected = false;
+                    connecting = false;
+                    setStatus('disconnected', 'Socket closed');
+                    term.writeln('\x1b[1;31m\r\n[!] Heartbeat with orchestrator lost. Retrying network loop...\x1b[0m');
+                }
+            });
+
+            term.onData(data => {
+                if (!connected) return;
+                socket.emit('ssh_input', { vps_id: vpsId, input: data });
+            });
+
+            function initiateConnection() {
+                if (connecting) return;
+                const host = sshHost.value.trim();
+                const port = parseInt(sshPort.value, 10) || 22;
+                const user = sshUser.value.trim() || 'root';
+                const pass = sshPass.value.trim();
+
+                if (!host || !pass) {
+                    return;
+                }
+
+                connecting = true;
+                connected = false;
+                setStatus('connecting', 'Key negotiation');
+                overlay.classList.add('hidden');
+
+                term.clear();
+                term.writeln('\x1b[36m╔═══════════════════════════════════════════════════════════╗\x1b[0m');
+                term.writeln('\x1b[36m║                  Authenticating Credentials                ║\x1b[0m');
+                term.writeln('\x1b[36m╚═══════════════════════════════════════════════════════════╝\x1b[0m');
+                term.writeln('\r\n\x1b[36mConnecting to root@' + host + ':' + port + ' via management bridge...\x1b[0m\r\n');
+
+                socket.emit('ssh_connect', {
+                    vps_id: vpsId,
+                    host: host,
+                    port: port,
+                    username: user,
+                    password: pass
+                });
+            }
+
+            connectBtn.addEventListener('click', initiateConnection);
+
+            reconnectBtn.addEventListener('click', () => {
+                if (connected) {
+                    socket.emit('ssh_disconnect', { vps_id: vpsId });
+                }
+                connected = false;
+                connecting = false;
+                overlay.classList.remove('hidden');
+                setStatus('disconnected', 'Reset');
+                term.clear();
+                fetchConnectionDetails();
+            });
+
+            exitBtn.addEventListener('click', () => {
+                if (connected) {
+                    socket.emit('ssh_disconnect', { vps_id: vpsId });
+                }
+                window.location.href = `/vps/${vpsId}`;
+            });
+
+            fullscreenBtn.addEventListener('click', () => {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen();
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    }
+                }
+            });
+
+            window.addEventListener('resize', () => {
+                if (term && fitAddon) {
+                    fitAddon.fit();
+                    if (connected) {
+                        const dims = fitAddon.proposeDimensions();
+                        if (dims) {
+                            socket.emit('ssh_resize', {
+                                vps_id: vpsId,
+                                cols: dims.cols,
+                                rows: dims.rows
+                            });
+                        }
+                    }
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'F11') {
+                    e.preventDefault();
+                    fullscreenBtn.click();
+                }
+                if (e.ctrlKey && e.shiftKey && e.key === 'V') {
+                    e.preventDefault();
+                    navigator.clipboard.readText().then(text => {
+                        if (connected && text) {
+                            socket.emit('ssh_input', { vps_id: vpsId, input: text });
+                        }
+                    }).catch(() => {});
+                }
+            });
+
+            sshPass.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    connectBtn.click();
+                }
+            });
+
+            setStatus('disconnected', 'Ready');
+
+            window.addEventListener('beforeunload', () => {
+                if (connected) {
+                    socket.emit('ssh_disconnect', { vps_id: vpsId });
+                }
+            });
+        })();
+    </script>
+
+    <script>
+        (function secondaryFit() {
+            setTimeout(() => {
+                if (window.fitAddon) {
+                    try { window.fitAddon.fit(); } catch(e) {}
+                } else {
+                    if (typeof FitAddon !== 'undefined' && term) {
+                        try { 
+                            const fit = new FitAddon.FitAddon();
+                            term.loadAddon(fit);
+                            fit.fit();
+                            window.fitAddon = fit;
+                        } catch (e) {}
+                    }
+                }
+            }, 200);
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-[#0B1020]">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+    <title>{% block title %}{{ panel_name }}{% endblock %}</title>
+   
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ get_setting('favicon', '/static/img/favicon.ico') }}">
+    <link rel="apple-touch-icon" href="{{ get_setting('header_icon', '/static/img/logo.png') }}">
+   
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+   
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+   
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- Tailwind CSS Play CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            base: '#0B1020',
+                            card: 'rgba(15, 22, 45, 0.45)',
+                            input: 'rgba(21, 29, 59, 0.4)',
+                            hover: 'rgba(59, 130, 246, 0.08)',
+                            border: 'rgba(59, 130, 246, 0.15)',
+                            borderActive: 'rgba(6, 182, 212, 0.5)',
+                        },
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            300: '#86efac',
+                            400: '#4ade80',
+                            500: '#3b82f6', // Electric Blue
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            900: '#1e3a8a',
+                            accent: '#a855f7' // Violet
+                        },
+                        indigo: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            200: '#ddd6fe',
+                            300: '#c4b5fd',
+                            400: '#a78bfa',
+                            500: '#3b82f6', // Electric Blue
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e3a8a',
+                            900: '#0f172a',
+                            950: '#0B1020'
+                        }
+                    },
+                    borderRadius: {
+                        'lg': '14px',
+                        'xl': '20px',
+                        '2xl': '24px',
+                        '3xl': '28px',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    boxShadow: {
+                        glow: '0 0 25px rgba(59, 130, 246, 0.25)',
+                        glowPurple: '0 0 25px rgba(168, 85, 247, 0.25)',
+                        glowCyan: '0 0 25px rgba(6, 182, 212, 0.25)',
+                        glowGreen: '0 0 25px rgba(16, 185, 129, 0.25)',
+                        glowRed: '0 0 25px rgba(244, 63, 94, 0.25)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style type="text/css">
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(11, 16, 32, 0.8);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(59, 130, 246, 0.15);
+            border-radius: 99px;
+            border: 2px solid rgba(11, 16, 32, 0.8);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(6, 182, 212, 0.4);
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+        }
+
+        /* Glassmorphism backgrounds */
+        .glass-panel {
+            background: rgba(15, 22, 45, 0.55) !important;
+            backdrop-filter: blur(28px) !important;
+            -webkit-backdrop-filter: blur(28px) !important;
+            border: 1px solid rgba(59, 130, 246, 0.15) !important;
+        }
+        .glass-card {
+            background: rgba(21, 29, 59, 0.35) !important;
+            backdrop-filter: blur(20px) !important;
+            -webkit-backdrop-filter: blur(20px) !important;
+            border: 1px solid rgba(59, 130, 246, 0.1) !important;
+            border-radius: 24px !important; /* Premium rounded corner (20-28px) */
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.4), 0 1px 1px 0 rgba(255, 255, 255, 0.05) inset !important;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        .glass-card:hover {
+            border-color: rgba(6, 182, 212, 0.35) !important;
+            box-shadow: 0 20px 45px -15px rgba(6, 182, 212, 0.15), 0 0 25px rgba(168, 85, 247, 0.08), 0 1px 1px 0 rgba(255, 255, 255, 0.1) inset !important;
+            transform: translateY(-6px) !important; /* Cards gently float when hovered */
+        }
+        
+        /* Video background utility */
+        .bg-video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -10;
+            opacity: 0.12;
+            pointer-events: none;
+        }
+        @media (max-width: 768px) {
+            .bg-video {
+                display: none;
+            }
+        }
+
+        /* Transition animations */
+        .sidebar-transition {
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Custom Buttons Redesign - Pill-shaped with animated gradient borders */
+        .btn, button:not(#menuToggle):not(#closeSidebarBtn):not(#notificationsBtn):not(#userMenuBtn), .btn-primary, [type="submit"], [type="button"]:not(#menuToggle) {
+            border-radius: 9999px !important;
+            font-weight: 500 !important;
+            letter-spacing: 0.03em !important;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            position: relative;
+            overflow: hidden;
+        }
+        .bg-indigo-600, .btn-primary, .btn-indigo {
+            background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 50%, #a855f7 100%) !important;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.1) inset !important;
+            color: #ffffff !important;
+            border: none !important;
+        }
+        .bg-indigo-600:hover, .btn-primary:hover, .btn-indigo:hover {
+            transform: translateY(-3px) scale(1.03) !important;
+            box-shadow: 0 8px 30px rgba(6, 182, 212, 0.4), 0 0 25px rgba(168, 85, 247, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.2) inset !important;
+        }
+        .bg-indigo-600:active, .btn-primary:active {
+            transform: translateY(0) scale(0.96) !important;
+        }
+        .bg-slate-800, .bg-slate-700, .btn-secondary {
+            background: rgba(21, 29, 59, 0.4) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            backdrop-filter: blur(10px) !important;
+            color: #e2e8f0 !important;
+        }
+        .bg-slate-800:hover, .bg-slate-700:hover, .btn-secondary:hover {
+            background: rgba(21, 29, 59, 0.6) !important;
+            border-color: rgba(6, 182, 212, 0.3) !important;
+            box-shadow: 0 4px 15px rgba(6, 182, 212, 0.1) !important;
+            transform: translateY(-2px) scale(1.02) !important;
+        }
+
+        /* Spaced table rows with hover animations */
+        table:not(.vps-terminal-table) {
+            border-collapse: separate !important;
+            border-spacing: 0 10px !important;
+            width: 100%;
+        }
+        table:not(.vps-terminal-table) thead th {
+            color: rgba(255, 255, 255, 0.4) !important;
+            font-weight: 600 !important;
+            font-size: 11px !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.1em !important;
+            border-bottom: none !important;
+            padding-bottom: 8px !important;
+        }
+        table:not(.vps-terminal-table) tbody tr {
+            background: rgba(21, 29, 59, 0.25) !important;
+            border: 1px solid rgba(59, 130, 246, 0.08) !important;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        table:not(.vps-terminal-table) tbody tr:hover {
+            background: rgba(59, 130, 246, 0.06) !important;
+            transform: translateY(-3px) scale(1.008) !important;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3), 0 0 20px rgba(6, 182, 212, 0.06) !important;
+            border-color: rgba(6, 182, 212, 0.25) !important;
+        }
+        table:not(.vps-terminal-table) tbody td {
+            border: none !important;
+            padding: 18px 16px !important;
+        }
+        table:not(.vps-terminal-table) tbody td:first-child {
+            border-top-left-radius: 18px !important;
+            border-bottom-left-radius: 18px !important;
+        }
+        table:not(.vps-terminal-table) tbody td:last-child {
+            border-top-right-radius: 18px !important;
+            border-bottom-right-radius: 18px !important;
+        }
+
+        /* Sidebar active navigation links - Modern glass styling */
+        aside .space-y-1 a[class*="border-indigo-500"],
+        aside .space-y-1 a[class*="bg-gradient-to-r"] {
+            background: linear-gradient(90deg, rgba(6, 182, 212, 0.12) 0%, rgba(168, 85, 247, 0.04) 100%) !important;
+            border-left: 3px solid #06b6d4 !important;
+            box-shadow: inset 4px 0 15px rgba(6, 182, 212, 0.05) !important;
+            color: #ffffff !important;
+            border-radius: 12px !important;
+        }
+        aside .space-y-1 a[class*="border-indigo-500"] i,
+        aside .space-y-1 a[class*="bg-gradient-to-r"] i {
+            color: #22d3ee !important;
+            filter: drop-shadow(0 0 8px rgba(6, 182, 212, 0.5)) !important;
+        }
+
+        /* Modern search bars and Inputs configuration with glowing focus */
+        input[type="text"], input[type="password"], input[type="email"], input[type="number"], select, textarea {
+            background: rgba(21, 29, 59, 0.4) !important;
+            border: 1px solid rgba(59, 130, 246, 0.15) !important;
+            border-radius: 14px !important;
+            padding: 12px 18px !important;
+            color: #ffffff !important;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
+            border-color: rgba(6, 182, 212, 0.6) !important;
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.25), 0 0 0 1px rgba(6, 182, 212, 0.3) !important;
+            background: rgba(21, 29, 59, 0.6) !important;
+            outline: none !important;
+        }
+
+        /* Floating sidebar adjustments for desktop */
+        @media (min-width: 768px) {
+            aside#sidebar {
+                top: 16px !important;
+                bottom: 16px !important;
+                left: 16px !important;
+                height: calc(100vh - 32px) !important;
+                border-radius: 24px !important;
+                border: 1px solid rgba(59, 130, 246, 0.15) !important;
+                box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4) !important;
+            }
+            .flex-1.md\:ml-64 {
+                margin-left: 288px !important;
+                padding: 16px 16px 16px 0 !important;
+            }
+        }
+
+        /* Progress bars with animated shimmer */
+        @keyframes shimmer {
+            100% { transform: translateX(100%); }
+        }
+        .shimmer-progress {
+            position: relative;
+            overflow: hidden;
+        }
+        .shimmer-progress::after {
+            content: '';
+            position: absolute;
+            top: 0; right: 0; bottom: 0; left: 0;
+            transform: translateX(-100%);
+            background-image: linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0) 0%,
+                rgba(255, 255, 255, 0.15) 20%,
+                rgba(255, 255, 255, 0.4) 60%,
+                rgba(255, 255, 255, 0) 100%
+            );
+            animation: shimmer 2.5s infinite;
+        }
+
+        /* Subtle floating particles behind hero section */
+        .subtle-particles {
+            background-image: 
+                radial-gradient(1px 1px at 20px 30px, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 40px 70px, rgba(255,255,255,0.5), rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 50px 160px, rgba(255,255,255,0.3), rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 80px 240px, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 150px 120px, rgba(255,255,255,0.4), rgba(0,0,0,0)),
+                radial-gradient(1.5px 1.5px at 110px 210px, rgba(255,255,255,0.6), rgba(0,0,0,0));
+            background-size: 550px 550px;
+            opacity: 0.18;
+            animation: particle-drift 60s linear infinite;
+        }
+        @keyframes particle-drift {
+            from { background-position: 0 0; }
+            to { background-position: 550px 1100px; }
+        }
+
+        /* Moving ambient gradient */
+        @keyframes ambient-pulse {
+            0%, 100% { transform: translate(0px, 0px) scale(1); }
+            33% { transform: translate(30px, -50px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.95); }
+        }
+        .ambient-glow-1 {
+            animation: ambient-pulse 25s infinite alternate;
+        }
+        .ambient-glow-2 {
+            animation: ambient-pulse 30s infinite alternate-reverse;
+        }
+
+        /* Pulse effects */
+        @keyframes subtle-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.05); }
+        }
+        .pulse-glowing {
+            animation: subtle-pulse 2.5s infinite ease-in-out;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="h-full text-slate-100 font-sans antialiased overflow-x-hidden relative bg-[#0B1020]">
+    
+    <!-- Animated Video Background -->
+    {% if get_setting('video_background_enabled', '1') == '1' %}
+    <video autoplay muted loop playsinline class="bg-video">
+        <source src="{{ get_setting('video_background_url', 'https://motionbgs.com/media/1335/outer-space-particles.1920x1080.mp4') }}" type="video/mp4">
+    </video>
+    {% endif %}
+
+    <!-- Global ambient radial glow gradients and particles -->
+    <div class="fixed inset-0 subtle-particles pointer-events-none -z-20"></div>
+    <div class="fixed top-[-20%] left-[-10%] w-[60%] h-[60%] bg-indigo-900/15 rounded-full blur-[130px] pointer-events-none -z-20 ambient-glow-1"></div>
+    <div class="fixed bottom-[-10%] right-[-10%] w-[55%] h-[55%] bg-cyan-950/15 rounded-full blur-[110px] pointer-events-none -z-20 ambient-glow-2"></div>
+    <div class="fixed top-[40%] right-[10%] w-[40%] h-[40%] bg-purple-950/10 rounded-full blur-[120px] pointer-events-none -z-20 ambient-glow-1"></div>
+
+    <div class="flex min-h-full">
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar" class="sidebar-transition fixed inset-y-0 left-0 z-50 w-64 glass-panel border-r border-white/5 flex flex-col transform -translate-x-full md:translate-x-0">
+            <!-- Sidebar Header -->
+            <div class="h-16 flex items-center justify-between px-6 border-b border-white/5">
+                <a href="{{ url_for('dashboard') if current_user.is_authenticated else url_for('index') }}" class="flex items-center justify-start h-10 max-w-[180px]">
+                    {{ BRANDING.logo_svg|safe }}
+                </a>
+                <button id="closeSidebarBtn" class="md:hidden text-slate-400 hover:text-white p-1 rounded-md hover:bg-white/5">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+
+            {% if current_user.is_authenticated %}
+            <!-- Navigation items -->
+            <nav class="flex-1 overflow-y-auto p-4 space-y-6">
+                <!-- Main Section -->
+                <div>
+                    <div class="px-3 mb-2 text-[10px] font-bold tracking-wider text-slate-500 uppercase font-display">Services</div>
+                    <div class="space-y-1">
+                        <a href="{{ url_for('dashboard') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group {% if request.endpoint == 'dashboard' %} bg-gradient-to-r from-indigo-600/30 to-indigo-500/10 border-l-2 border-indigo-500 text-white {% else %} text-slate-400 hover:text-slate-200 hover:bg-white/[0.02] {% endif %}">
+                            <i class="fas fa-chart-pie w-5 text-center group-hover:scale-110 transition-transform"></i>
+                            <span>Dashboard</span>
+                        </a>
+                        <a href="{{ url_for('vps_list') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group {% if request.endpoint in ['vps_list', 'vps_detail', 'vps_console', 'vps_files'] %} bg-gradient-to-r from-indigo-600/30 to-indigo-500/10 border-l-2 border-indigo-500 text-white {% else %} text-slate-400 hover:text-slate-200 hover:bg-white/[0.02] {% endif %}">
+                            <i class="fas fa-server w-5 text-center group-hover:scale-110 transition-transform"></i>
+                            <span>My Containers</span>
+                        </a>
+                        <a href="{{ url_for('ports_list') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group {% if request.endpoint == 'ports_list' %} bg-gradient-to-r from-indigo-600/30 to-indigo-500/10 border-l-2 border-indigo-500 text-white {% else %} text-slate-400 hover:text-slate-200 hover:bg-white/[0.02] {% endif %}">
+                            <i class="fas fa-plug w-5 text-center group-hover:scale-110 transition-transform"></i>
+                            <span>Port Forwarding</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Account Management -->
+                <div>
+                    <div class="px-3 mb-2 text-[10px] font-bold tracking-wider text-slate-500 uppercase font-display">Account</div>
+                    <div class="space-y-1">
+                        <a href="{{ url_for('profile') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group {% if request.endpoint == 'profile' %} bg-gradient-to-r from-indigo-600/30 to-indigo-500/10 border-l-2 border-indigo-500 text-white {% else %} text-slate-400 hover:text-slate-200 hover:bg-white/[0.02] {% endif %}">
+                            <i class="fas fa-user w-5 text-center group-hover:scale-110 transition-transform"></i>
+                            <span>Profile Settings</span>
+                        </a>
+                        <a href="{{ url_for('notifications') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group {% if request.endpoint == 'notifications' %} bg-gradient-to-r from-indigo-600/30 to-indigo-500/10 border-l-2 border-indigo-500 text-white {% else %} text-slate-400 hover:text-slate-200 hover:bg-white/[0.02] {% endif %}">
+                            <i class="fas fa-bell w-5 text-center group-hover:scale-110 transition-transform"></i>
+                            <span>Notifications</span>
+                            {% if get_unread_notifications_count(current_user.id) > 0 %}
+                            <span class="ml-auto bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full pulse-glowing">{{ get_unread_notifications_count(current_user.id) }}</span>
+                            {% endif %}
+                        </a>
+                    </div>
+                </div>
+
+                {% if current_user.is_admin %}
+                <!-- Engine Control Center -->
+                <div>
+                    <div class="px-3 mb-2 text-[10px] font-bold tracking-wider text-cyan-400 uppercase font-display flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                        <span>Engine Control Center</span>
+                    </div>
+                    <div class="space-y-1">
+                        <a href="{{ url_for('admin_vps_create') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group {% if request.endpoint == 'admin_vps_create' %} bg-gradient-to-r from-indigo-600/30 to-indigo-500/10 border-l-2 border-indigo-500 text-white {% else %} text-slate-400 hover:text-slate-200 hover:bg-white/[0.02] {% endif %}">
+                            <i class="fas fa-plus-square w-5 text-center text-cyan-400 group-hover:scale-110 transition-transform"></i>
+                            <span>VPS Create</span>
+                        </a>
+                        <a href="{{ url_for('admin_node_create') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group {% if request.endpoint == 'admin_node_create' %} bg-gradient-to-r from-indigo-600/30 to-indigo-500/10 border-l-2 border-indigo-500 text-white {% else %} text-slate-400 hover:text-slate-200 hover:bg-white/[0.02] {% endif %}">
+                            <i class="fas fa-folder-plus w-5 text-center text-purple-400 group-hover:scale-110 transition-transform"></i>
+                            <span>Node Create</span>
+                        </a>
+                        <a href="{{ url_for('admin_vps') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group {% if request.endpoint == 'admin_vps' and request.path == url_for('admin_vps') %} bg-gradient-to-r from-indigo-600/30 to-indigo-500/10 border-l-2 border-indigo-500 text-white {% else %} text-slate-400 hover:text-slate-200 hover:bg-white/[0.02] {% endif %}">
+                            <i class="fas fa-tasks w-5 text-center text-blue-400 group-hover:scale-110 transition-transform"></i>
+                            <span>VPS Manage</span>
+                        </a>
+                        <a href="{{ url_for('admin_nodes') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group {% if request.endpoint == 'admin_nodes' and request.path == url_for('admin_nodes') %} bg-gradient-to-r from-indigo-600/30 to-indigo-500/10 border-l-2 border-indigo-500 text-white {% else %} text-slate-400 hover:text-slate-200 hover:bg-white/[0.02] {% endif %}">
+                            <i class="fas fa-sliders-h w-5 text-center text-emerald-400 group-hover:scale-110 transition-transform"></i>
+                            <span>Node Manage</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Admin Operations -->
+                <div>
+                    <div class="px-3 mb-2 text-[10px] font-bold tracking-wider text-slate-500 uppercase font-display">Administration</div>
+                    <div class="space-y-1">
+                        <a href="{{ url_for('admin_dashboard') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group {% if request.endpoint == 'admin_dashboard' %} bg-gradient-to-r from-indigo-600/30 to-indigo-500/10 border-l-2 border-indigo-500 text-white {% else %} text-slate-400 hover:text-slate-200 hover:bg-white/[0.02] {% endif %}">
+                            <i class="fas fa-crown w-5 text-center group-hover:scale-110 transition-transform"></i>
+                            <span>Admin Overview</span>
+                        </a>
+                        <a href="{{ url_for('admin_users') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group {% if request.endpoint and 'user' in request.endpoint %} bg-gradient-to-r from-indigo-600/30 to-indigo-500/10 border-l-2 border-indigo-500 text-white {% else %} text-slate-400 hover:text-slate-200 hover:bg-white/[0.02] {% endif %}">
+                            <i class="fas fa-users w-5 text-center group-hover:scale-110 transition-transform"></i>
+                            <span>User Directory</span>
+                        </a>
+                        <a href="{{ url_for('admin_vps') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group {% if request.endpoint == 'admin_vps' %} bg-gradient-to-r from-indigo-600/30 to-indigo-500/10 border-l-2 border-indigo-500 text-white {% else %} text-slate-400 hover:text-slate-200 hover:bg-white/[0.02] {% endif %}">
+                            <i class="fas fa-server w-5 text-center group-hover:scale-110 transition-transform"></i>
+                            <span>All Containers</span>
+                        </a>
+                        <a href="{{ url_for('admin_vps_expiring') }}?days=30" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group {% if request.endpoint == 'admin_vps_expiring' %} bg-gradient-to-r from-indigo-600/30 to-indigo-500/10 border-l-2 border-indigo-500 text-white {% else %} text-slate-400 hover:text-slate-200 hover:bg-white/[0.02] {% endif %}">
+                            <i class="fas fa-clock w-5 text-center group-hover:scale-110 transition-transform"></i>
+                            <span>Expiring Leases</span>
+                            <span id="expiringVPSCount" class="ml-auto bg-amber-500 text-slate-900 text-[10px] font-bold px-2 py-0.5 rounded-full hidden">0</span>
+                        </a>
+                        <a href="{{ url_for('admin_nodes') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group {% if request.endpoint and 'node' in request.endpoint %} bg-gradient-to-r from-indigo-600/30 to-indigo-500/10 border-l-2 border-indigo-500 text-white {% else %} text-slate-400 hover:text-slate-200 hover:bg-white/[0.02] {% endif %}">
+                            <i class="fas fa-network-wired w-5 text-center group-hover:scale-110 transition-transform"></i>
+                            <span>Cluster Nodes</span>
+                        </a>
+                        <a href="{{ url_for('os_icons') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group {% if request.endpoint == 'os_icons' %} bg-gradient-to-r from-indigo-600/30 to-indigo-500/10 border-l-2 border-indigo-500 text-white {% else %} text-slate-400 hover:text-slate-200 hover:bg-white/[0.02] {% endif %}">
+                            <i class="fas fa-icons w-5 text-center group-hover:scale-110 transition-transform"></i>
+                            <span>OS Mappings</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- System Configuration -->
+                <div>
+                    <div class="px-3 mb-2 text-[10px] font-bold tracking-wider text-slate-500 uppercase font-display">System</div>
+                    <div class="space-y-1">
+                        <a href="{{ url_for('admin_settings') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group {% if request.endpoint == 'admin_settings' %} bg-gradient-to-r from-indigo-600/30 to-indigo-500/10 border-l-2 border-indigo-500 text-white {% else %} text-slate-400 hover:text-slate-200 hover:bg-white/[0.02] {% endif %}">
+                            <i class="fas fa-cog w-5 text-center group-hover:scale-110 transition-transform"></i>
+                            <span>Global Settings</span>
+                        </a>
+                        <a href="{{ url_for('admin_system_info') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group {% if request.endpoint == 'admin_system_info' %} bg-gradient-to-r from-indigo-600/30 to-indigo-500/10 border-l-2 border-indigo-500 text-white {% else %} text-slate-400 hover:text-slate-200 hover:bg-white/[0.02] {% endif %}">
+                            <i class="fas fa-info-circle w-5 text-center group-hover:scale-110 transition-transform"></i>
+                            <span>System Diagnostics</span>
+                        </a>
+                        <a href="{{ url_for('admin_logs') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group {% if request.endpoint == 'admin_logs' %} bg-gradient-to-r from-indigo-600/30 to-indigo-500/10 border-l-2 border-indigo-500 text-white {% else %} text-slate-400 hover:text-slate-200 hover:bg-white/[0.02] {% endif %}">
+                            <i class="fas fa-file-alt w-5 text-center group-hover:scale-110 transition-transform"></i>
+                            <span>System Logs</span>
+                        </a>
+                        <a href="{{ url_for('admin_backup_list') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group {% if request.endpoint and 'backup' in request.endpoint %} bg-gradient-to-r from-indigo-600/30 to-indigo-500/10 border-l-2 border-indigo-500 text-white {% else %} text-slate-400 hover:text-slate-200 hover:bg-white/[0.02] {% endif %}">
+                            <i class="fas fa-database w-5 text-center group-hover:scale-110 transition-transform"></i>
+                            <span>Backups</span>
+                        </a>
+                        <a href="{{ url_for('admin_maintenance') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group {% if request.endpoint == 'admin_maintenance' %} bg-gradient-to-r from-indigo-600/30 to-indigo-500/10 border-l-2 border-indigo-500 text-white {% else %} text-slate-400 hover:text-slate-200 hover:bg-white/[0.02] {% endif %}">
+                            <i class="fas fa-tools w-5 text-center group-hover:scale-110 transition-transform"></i>
+                            <span>Maintenance</span>
+                        </a>
+                        <a href="{{ url_for('admin_api') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group {% if request.endpoint == 'admin_api' %} bg-gradient-to-r from-indigo-600/30 to-indigo-500/10 border-l-2 border-indigo-500 text-white {% else %} text-slate-400 hover:text-slate-200 hover:bg-white/[0.02] {% endif %}">
+                            <i class="fas fa-key w-5 text-center group-hover:scale-110 transition-transform"></i>
+                            <span>API Access</span>
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+            </nav>
+            {% endif %}
+        </aside>
+
+        <!-- Main Wrapper -->
+        <div class="flex-1 md:ml-64 flex flex-col min-h-screen sidebar-transition">
+            <!-- Header Navbar -->
+            <header class="h-16 sticky top-4 z-40 bg-[#151D3B]/45 backdrop-blur-xl border border-white/10 px-6 rounded-2xl flex items-center justify-between mx-4 md:mx-6 mb-6 shadow-xl relative overflow-hidden">
+                <!-- Glowing line at bottom of navbar -->
+                <div class="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent"></div>
+                <div class="flex items-center gap-4">
+                    <button id="menuToggle" class="md:hidden text-slate-400 hover:text-white p-2 rounded-lg hover:bg-white/5 focus:outline-none">
+                        <i class="fas fa-bars text-lg"></i>
+                    </button>
+                    <h1 class="font-display font-bold text-lg md:text-xl tracking-tight text-white flex items-center gap-2">
+                        {% block header_title %}{{ panel_name }}{% endblock %}
+                    </h1>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    {% if current_user.is_authenticated %}
+                    <!-- Notifications Dropdown -->
+                    <div class="relative">
+                        <button id="notificationsBtn" class="relative text-slate-400 hover:text-white p-2 rounded-lg hover:bg-white/5 transition-all focus:outline-none">
+                            <i class="fas fa-bell text-lg"></i>
+                            <span id="notificationBadge" class="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full hidden ring-2 ring-slate-950"></span>
+                        </button>
+                        
+                        <div id="notificationsPanel" class="absolute right-0 mt-2 w-80 glass-panel rounded-xl shadow-xl border border-white/10 hidden z-50 overflow-hidden transform scale-95 origin-top-right transition-all">
+                            <div class="p-4 border-b border-white/5 flex items-center justify-between">
+                                <h3 class="font-semibold text-sm">Notifications</h3>
+                                <a href="{{ url_for('notifications') }}" class="text-xs text-indigo-400 hover:text-indigo-300">View all</a>
+                            </div>
+                            <div id="notificationsList" class="max-height-[300px] overflow-y-auto divide-y divide-white/5">
+                                <div class="p-6 text-center text-slate-500">
+                                    <i class="fas fa-bell-slash text-2xl mb-2 block opacity-40"></i>
+                                    <p class="text-xs">No notifications</p>
+                                </div>
+                            </div>
+                            <div class="p-3 border-t border-white/5 text-center">
+                                <a href="#" id="markAllRead" class="text-xs text-slate-400 hover:text-white transition">Mark all as read</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- User Menu -->
+                    <div class="relative">
+                        <button id="userMenuBtn" class="flex items-center gap-3 p-1.5 rounded-lg hover:bg-white/5 transition focus:outline-none text-left">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-600/50 border border-indigo-500/30 flex items-center justify-center font-bold text-sm text-white overflow-hidden shadow-inner">
+                                {% if current_user.profile_picture %}
+                                <img src="{{ current_user.profile_picture }}" alt="{{ current_user.username }}" class="w-full h-full object-cover">
+                                {% else %}
+                                <span>{{ current_user.username[:1].upper() }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="hidden md:block">
+                                <div class="text-xs font-semibold text-white leading-tight">{{ current_user.username }}</div>
+                                <div class="text-[10px] text-indigo-400 leading-none mt-0.5">
+                                    {% if current_user.is_main_admin %}
+                                    Main Admin
+                                    {% elif current_user.is_admin %}
+                                    Admin
+                                    {% else %}
+                                    User
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <i class="fas fa-chevron-down text-[10px] text-slate-400 hidden md:block ml-1"></i>
+                        </button>
+                        
+                        <!-- Dropdown Menu -->
+                        <div id="userDropdown" class="absolute right-0 mt-2 w-56 glass-panel rounded-xl shadow-xl border border-white/10 hidden z-50 py-1">
+                            <div class="px-4 py-3 border-b border-white/5">
+                                <div class="text-xs font-semibold text-white">{{ current_user.username }}</div>
+                                <div class="text-[10px] text-slate-400 truncate mt-0.5">{{ current_user.email }}</div>
+                            </div>
+                            <a href="{{ url_for('profile') }}" class="flex items-center gap-3 px-4 py-2.5 text-xs text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
+                                <i class="fas fa-user text-indigo-400 w-4"></i>
+                                <span>Profile Settings</span>
+                            </a>
+                            <a href="{{ url_for('notifications') }}" class="flex items-center gap-3 px-4 py-2.5 text-xs text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
+                                <i class="fas fa-bell text-indigo-400 w-4"></i>
+                                <span>Notifications</span>
+                            </a>
+                            <div class="h-px bg-white/5 my-1"></div>
+                            <a href="{{ url_for('logout') }}" class="flex items-center gap-3 px-4 py-2.5 text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors">
+                                <i class="fas fa-sign-out-alt w-4"></i>
+                                <span>Logout Session</span>
+                            </a>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="flex items-center gap-3">
+                        <a href="{{ url_for('login') }}" class="text-xs font-medium text-slate-300 hover:text-white px-3 py-2 transition-all">Login</a>
+                        {% if get_setting('registration_enabled', '1') == '1' %}
+                        <a href="{{ url_for('register') }}" class="text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg shadow-lg hover:shadow-indigo-500/20 transition-all">Get Started</a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </header>
+
+            <!-- Main Content Container -->
+            <main class="flex-1 p-4 md:p-8 flex flex-col">
+                <!-- Flash Messages Banner -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <div class="space-y-3 mb-6">
+                        {% for category, message in messages %}
+                            {% set bg_color = 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' if category == 'success' else 'bg-rose-500/10 border-rose-500/20 text-rose-400' if category == 'danger' else 'bg-amber-500/10 border-amber-500/20 text-amber-400' if category == 'warning' else 'bg-blue-500/10 border-blue-500/20 text-blue-400' %}
+                            {% set icon_type = 'check-circle' if category == 'success' else 'exclamation-circle' if category == 'danger' else 'exclamation-triangle' if category == 'warning' else 'info-circle' %}
+                            <div class="flex items-center gap-3 px-4 py-3 border rounded-xl text-sm {{ bg_color }} transition-all duration-300">
+                                <i class="fas fa-{{ icon_type }} text-lg"></i>
+                                <span class="flex-1 font-medium">{{ message }}</span>
+                                <button type="button" class="text-slate-400 hover:text-white transition" onclick="this.parentElement.remove()">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Breadcrumbs Block -->
+                {% block breadcrumbs %}{% endblock %}
+
+                <!-- Main Section Block -->
+                <div class="flex-1">
+                    {% block content %}{% endblock %}
+                </div>
+            </main>
+
+            <!-- System Footer -->
+            <footer class="py-6 px-4 md:px-8 border-t border-white/5 text-center text-[11px] text-slate-500 font-display">
+                <div class="flex flex-col md:flex-row items-center justify-between gap-4 max-w-7xl mx-auto">
+                    <div>
+                        {{ BRANDING.copyright_text }} | {{ BRANDING.footer_text }} | Version {{ PANEL_VERSION }}
+                    </div>
+                    <div class="flex items-center gap-4 text-slate-600">
+                        <span>Core Node: <span class="text-emerald-500/80 font-mono">ONLINE</span></span>
+                        <span>•</span>
+                        <span>Design System: <span class="text-cyan-400 font-mono">GLASSMORPH</span></span>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Global Loading Overlay -->
+    <div id="loadingModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm hidden">
+        <div class="flex flex-col items-center gap-4 p-8 rounded-2xl glass-panel">
+            <div class="w-12 h-12 border-4 border-slate-800 border-t-indigo-500 rounded-full animate-spin"></div>
+            <div class="text-sm font-medium text-slate-300 font-display">Executing Process...</div>
+        </div>
+    </div>
+
+    <!-- Core Scripts -->
+    <script>
+        // Global configuration
+        const CONFIG = {
+            socketioAvailable: {{ 'true' if socketio_available else 'false' }},
+            userId: {% if current_user.is_authenticated %}{{ current_user.id }}{% else %}null{% endif %},
+            csrfToken: '{{ csrf_token() if csrf_token else "" }}',
+            debug: {{ 'true' if DEBUG_MODE else 'false' }}
+        };
+
+        // Utility functions
+        function formatBytes(bytes, decimals = 2) {
+            if (!bytes || bytes === 0) return '0 B';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+
+        function formatDate(date) {
+            if (!date) return 'Never';
+            const d = new Date(date);
+            const now = new Date();
+            const diff = (now - d) / 1000;
+            if (diff < 60) return 'just now';
+            if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+            if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+            if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+            return d.toLocaleDateString();
+        }
+
+        function formatExpirationTime(expiresAt) {
+            if (!expiresAt) return null;
+            const expires = new Date(expiresAt);
+            const now = new Date();
+            const diff = (expires - now) / 1000;
+            if (diff < 0) return { text: 'Expired', class: 'bg-rose-500/20 text-rose-400 border border-rose-500/30', days: 0 };
+            const days = Math.floor(diff / 86400);
+            const hours = Math.floor((diff % 86400) / 3600);
+            
+            if (days === 0) {
+                return { text: `${hours}h left`, class: 'bg-rose-500/20 text-rose-400 border border-rose-500/30', days: 0 };
+            } else if (days <= 3) {
+                return { text: `${days}d left`, class: 'bg-amber-500/20 text-amber-400 border border-amber-500/30', days: days };
+            } else if (days <= 7) {
+                return { text: `${days}d left`, class: 'bg-amber-500/10 text-amber-500/90 border border-amber-500/20', days: days };
+            } else {
+                return { text: `${days}d left`, class: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30', days: days };
+            }
+        }
+
+        function getExpirationBadge(expiresAt, autoSuspendEnabled) {
+            if (!autoSuspendEnabled || !expiresAt) {
+                return '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full font-medium bg-slate-500/10 text-slate-400 border border-slate-500/20"><i class="fas fa-infinity text-[10px]"></i> No Expiry</span>';
+            }
+            const info = formatExpirationTime(expiresAt);
+            if (!info) return '';
+            const icon = info.days === 0 ? 'exclamation-triangle' : 'clock';
+            return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-full font-medium ${info.class}"><i class="fas fa-${icon} text-[10px]"></i> ${info.text}</span>`;
+        }
+
+        function showLoading() {
+            document.getElementById('loadingModal').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingModal').classList.add('hidden');
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            const bgClass = type === 'success' ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/30 shadow-glowGreen' :
+                            type === 'danger' ? 'bg-rose-950/80 text-rose-300 border-rose-500/30 shadow-glowRed' :
+                            type === 'warning' ? 'bg-amber-950/80 text-amber-300 border-amber-500/30' : 'bg-slate-900/90 text-indigo-300 border-indigo-500/30 shadow-glow';
+            
+            toast.className = `fixed top-6 right-6 z-[9999] flex items-center gap-3 px-4 py-3 rounded-xl border backdrop-blur-md shadow-lg max-w-sm transition-all duration-300 ${bgClass}`;
+            toast.style.transform = 'translateY(-20px)';
+            toast.style.opacity = '0';
+           
+            const icon = type === 'success' ? 'check-circle' :
+                        type === 'danger' ? 'exclamation-circle' :
+                        type === 'warning' ? 'exclamation-triangle' : 'info-circle';
+           
+            toast.innerHTML = `
+                <i class="fas fa-${icon} text-lg"></i>
+                <span class="text-sm font-medium flex-1">${message}</span>
+                <button class="text-slate-400 hover:text-white transition focus:outline-none" onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+           
+            document.body.appendChild(toast);
+            
+            // Trigger animation
+            requestAnimationFrame(() => {
+                toast.style.transform = 'translateY(0)';
+                toast.style.opacity = '1';
+            });
+           
+            // Auto-dismiss
+            setTimeout(() => {
+                toast.style.transform = 'translateY(-20px)';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+
+        // Sidebar responsive handlers
+        document.addEventListener('DOMContentLoaded', () => {
+            const sidebar = document.getElementById('sidebar');
+            const menuToggle = document.getElementById('menuToggle');
+            const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+
+            if (menuToggle && sidebar) {
+                menuToggle.addEventListener('click', () => {
+                    sidebar.classList.remove('-translate-x-full');
+                });
+            }
+
+            if (closeSidebarBtn && sidebar) {
+                closeSidebarBtn.addEventListener('click', () => {
+                    sidebar.classList.add('-translate-x-full');
+                });
+            }
+
+            // User dropdown toggle
+            const userMenuBtn = document.getElementById('userMenuBtn');
+            const userDropdown = document.getElementById('userDropdown');
+
+            if (userMenuBtn && userDropdown) {
+                userMenuBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    userDropdown.classList.toggle('hidden');
+                    if (!userDropdown.classList.contains('hidden')) {
+                        // Animation frame trigger for smooth scaling
+                        userDropdown.classList.add('scale-100');
+                    }
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (!userMenuBtn.contains(e.target) && !userDropdown.contains(e.target)) {
+                        userDropdown.classList.add('hidden');
+                    }
+                });
+            }
+
+            // Notification manager initialization
+            window.notificationManager = new NotificationManager();
+
+            {% if current_user.is_authenticated and current_user.is_admin %}
+            loadExpiringVPSCount();
+            setInterval(loadExpiringVPSCount, 300000);
+            {% endif %}
+            
+            // Realtime socket events
+            initSocketIO();
+            initAutoRefresh();
+        });
+
+        // Notifications manager class
+        class NotificationManager {
+            constructor() {
+                this.unreadCount = 0;
+                this.notifications = [];
+                this.init();
+            }
+
+            init() {
+                this.btn = document.getElementById('notificationsBtn');
+                this.panel = document.getElementById('notificationsPanel');
+                this.list = document.getElementById('notificationsList');
+                this.badge = document.getElementById('notificationBadge');
+               
+                if (!this.btn) return;
+               
+                this.btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.togglePanel();
+                });
+               
+                document.addEventListener('click', (e) => {
+                    if (this.panel && !this.panel.contains(e.target) && !this.btn.contains(e.target)) {
+                        this.panel.classList.add('hidden');
+                    }
+                });
+               
+                document.getElementById('markAllRead')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.markAllRead();
+                });
+               
+                this.loadNotifications();
+                setInterval(() => this.loadNotifications(), 30000);
+            }
+
+            togglePanel() {
+                if (!this.panel) return;
+                this.panel.classList.toggle('hidden');
+                if (!this.panel.classList.contains('hidden')) {
+                    this.loadNotifications(true);
+                }
+            }
+
+            async loadNotifications(showInPanel = false) {
+                try {
+                    const response = await fetch('/notifications/unread');
+                    const data = await response.json();
+                   
+                    if (data.success) {
+                        this.unreadCount = data.count;
+                        this.notifications = data.notifications;
+                       
+                        if (this.unreadCount > 0) {
+                            if (this.badge) this.badge.classList.remove('hidden');
+                        } else {
+                            if (this.badge) this.badge.classList.add('hidden');
+                        }
+                       
+                        if (showInPanel) {
+                            this.renderNotifications();
+                        }
+                    }
+                } catch (error) {
+                    console.error('Failed to load notifications:', error);
+                }
+            }
+
+            renderNotifications() {
+                if (!this.list) return;
+               
+                if (this.notifications.length === 0) {
+                    this.list.innerHTML = `
+                        <div class="p-6 text-center text-slate-500">
+                            <i class="fas fa-bell-slash text-xl mb-2 block opacity-40"></i>
+                            <p class="text-xs">No unread alerts</p>
+                        </div>
+                    `;
+                    return;
+                }
+               
+                let html = '';
+                this.notifications.forEach(notif => {
+                    let typeColor = 'text-blue-400 bg-blue-500/10';
+                    let icon = 'info-circle';
+                    
+                    if (notif.type === 'success') {
+                        typeColor = 'text-emerald-400 bg-emerald-500/10';
+                        icon = 'check-circle';
+                    } else if (notif.type === 'warning') {
+                        typeColor = 'text-amber-400 bg-amber-500/10';
+                        icon = 'exclamation-triangle';
+                    } else if (notif.type === 'danger') {
+                        typeColor = 'text-rose-400 bg-rose-500/10';
+                        icon = 'exclamation-circle';
+                    }
+                    
+                    if (notif.title && (notif.title.includes('Expir') || notif.title.includes('Renew'))) {
+                        icon = 'clock';
+                    }
+                   
+                    html += `
+                        <div class="p-4 hover:bg-white/[0.02] cursor-pointer transition flex items-start gap-3 text-left" onclick="notificationManager.markRead(${notif.id})">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${typeColor}">
+                                <i class="fas fa-${icon} text-sm"></i>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-xs font-semibold text-white truncate">${notif.title || 'Notification'}</div>
+                                <div class="text-[11px] text-slate-400 line-clamp-2 mt-0.5">${notif.message}</div>
+                                <div class="text-[10px] text-slate-500 mt-1">${formatDate(notif.created_at)}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+               
+                this.list.innerHTML = html;
+            }
+
+            async markRead(id) {
+                try {
+                    const response = await fetch(`/notifications/mark-read/${id}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    const data = await response.json();
+                   
+                    if (data.success) {
+                        this.loadNotifications();
+                        showToast('Notification cleared', 'success');
+                        this.togglePanel();
+                    }
+                } catch (error) {
+                    console.error('Failed to mark notification as read:', error);
+                }
+            }
+
+            async markAllRead() {
+                try {
+                    const response = await fetch('/notifications/mark-all-read', { method: 'POST' });
+                    const data = await response.json();
+                   
+                    if (data.success) {
+                        this.unreadCount = 0;
+                        if (this.badge) this.badge.classList.add('hidden');
+                        if (this.panel) this.panel.classList.add('hidden');
+                        showToast('All notifications cleared', 'success');
+                    }
+                } catch (error) {
+                    console.error('Failed to mark all notifications as read:', error);
+                }
+            }
+        }
+
+        // Socket IO configuration
+        function initSocketIO() {
+            if (!CONFIG.socketioAvailable || !CONFIG.userId) return;
+           
+            if (typeof io === 'undefined') {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.socket.io/4.5.4/socket.io.min.js';
+                script.onload = () => connectSocket();
+                document.head.appendChild(script);
+            } else {
+                connectSocket();
+            }
+           
+            function connectSocket() {
+                const socket = io();
+               
+                socket.on('connect', () => console.log('Socket.IO session connected'));
+               
+                socket.on('new_notification', (notification) => {
+                    notificationManager.unreadCount++;
+                    if (notificationManager.badge) notificationManager.badge.classList.remove('hidden');
+                    showToast(notification.title + ': ' + notification.message, notification.type);
+                });
+               
+                socket.on('vps_status_change', (data) => {
+                    const statusElements = document.querySelectorAll(`.vps-status[data-id="${data.vps_id}"]`);
+                    statusElements.forEach(el => {
+                        if (data.status === 'running') {
+                            el.innerHTML = '<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>Running</span>';
+                        } else if (data.status === 'stopped') {
+                            el.innerHTML = '<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-500/15 text-slate-400 border border-slate-500/20"><span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>Stopped</span>';
+                        } else {
+                            el.innerHTML = `<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/15 text-amber-400 border border-amber-500/20"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>${data.status}</span>`;
+                        }
+                    });
+                    showToast(`Container status: ${data.status.toUpperCase()}`, data.status === 'running' ? 'success' : 'info');
+                });
+               
+                socket.on('vps_stats', (data) => {
+                    updateVPSStatsUI(data.vps_id, data.stats);
+                });
+               
+                return socket;
+            }
+        }
+
+        // Auto stats refresh
+        function initAutoRefresh() {
+            if (document.querySelector('.vps-list-container')) {
+                setInterval(() => {
+                    document.querySelectorAll('.vps-row-item').forEach(item => {
+                        const vpsId = item.dataset.id;
+                        if (vpsId) {
+                            fetch(`/vps/${vpsId}/stats`)
+                                .then(res => res.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        updateVPSStatsUI(vpsId, data.stats);
+                                    }
+                                })
+                                .catch(console.error);
+                        }
+                    });
+                }, 8000);
+            }
+        }
+
+        function updateVPSStatsUI(vpsId, stats) {
+            const cpuBar = document.querySelector(`.vps-cpu-bar[data-id="${vpsId}"]`);
+            const ramBar = document.querySelector(`.vps-ram-bar[data-id="${vpsId}"]`);
+            const cpuVal = document.querySelector(`.vps-cpu-val[data-id="${vpsId}"]`);
+            const ramVal = document.querySelector(`.vps-ram-val[data-id="${vpsId}"]`);
+           
+            if (cpuBar) cpuBar.style.width = stats.cpu + '%';
+            if (cpuVal) cpuVal.textContent = stats.cpu.toFixed(0) + '%';
+           
+            if (ramBar) ramBar.style.width = stats.ram.pct + '%';
+            if (ramVal) ramVal.textContent = stats.ram.pct.toFixed(0) + '%';
+        }
+
+        {% if current_user.is_authenticated and current_user.is_admin %}
+        async function loadExpiringVPSCount() {
+            try {
+                const response = await fetch('/admin/vps/expiring?days=7', {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                const data = await response.json();
+                if (data.success && data.count > 0) {
+                    const badge = document.getElementById('expiringVPSCount');
+                    if (badge) {
+                        badge.textContent = data.count;
+                        badge.classList.remove('hidden');
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load expiring VPS count:', error);
+            }
+        }
+        {% endif %}
+
+        // Form submission utility
+        window.submitForm = async function(url, data, method = 'POST') {
+            showLoading();
+            try {
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                if (result.success) {
+                    showToast(result.message || 'Action completed successfully', 'success');
+                } else {
+                    showToast(result.error || 'An error occurred', 'danger');
+                }
+                return result;
+            } catch (error) {
+                console.error('Form submission error:', error);
+                showToast('Network error: ' + error.message, 'danger');
+                return { success: false, error: error.message };
+            } finally {
+                hideLoading();
+            }
+        };
+
+        window.confirmAction = function(message, callback) {
+            if (confirm(message)) {
+                callback();
+            }
+        };
+
+        if (typeof Chart !== 'undefined') {
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.05)';
+        }
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

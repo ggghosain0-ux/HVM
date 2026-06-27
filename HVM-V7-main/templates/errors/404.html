@@ -1,0 +1,37 @@
+<!-- templates/errors/404.html -->
+{% extends "base.html" %}
+
+{% block page_icon %}fas fa-exclamation-triangle{% endblock %}
+{% block page_title %}404 - Page Not Found{% endblock %}
+
+{% block content %}
+<div class="min-h-[60vh] flex items-center justify-center p-4 animate-[fadeIn_0.4s_ease-out]">
+    <div class="bg-slate-900/40 border border-white/5 rounded-3xl p-8 max-w-md w-full shadow-2xl relative overflow-hidden text-center backdrop-blur-md">
+        <!-- Ambient decorative node -->
+        <div class="absolute -right-24 -top-24 w-64 h-64 rounded-full bg-indigo-500/5 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 space-y-6">
+            <div class="w-16 h-16 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center mx-auto shadow-lg shadow-indigo-500/5">
+                <i class="fas fa-compass text-2xl animate-spin-slow"></i>
+            </div>
+            
+            <div class="space-y-1">
+                <h1 class="text-5xl font-black font-mono text-white tracking-tight">404</h1>
+                <h2 class="text-sm font-bold font-display text-slate-300">Target resource not located</h2>
+                <p class="text-xs text-slate-400 leading-relaxed font-medium">The hypervisor node was unable to route your request. The interface may have relocated or been retired from the active registry.</p>
+            </div>
+
+            <div class="flex items-center justify-center gap-3">
+                <a href="javascript:history.back()" class="px-4 py-2.5 text-xs font-bold rounded-xl border border-white/5 hover:border-white/10 text-slate-300 hover:text-white transition bg-slate-800/20 hover:bg-slate-800/40 flex items-center gap-1.5 cursor-pointer">
+                    <i class="fas fa-arrow-left text-[10px]"></i>
+                    <span>Go Back</span>
+                </a>
+                <a href="{{ url_for('dashboard') }}" class="px-4 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/15 transition flex items-center gap-1.5 cursor-pointer">
+                    <i class="fas fa-home text-[10px]"></i>
+                    <span>Dashboard</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

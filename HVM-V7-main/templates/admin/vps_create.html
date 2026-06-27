@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+
+{% block title %}Create New VPS - {{ panel_name }}{% endblock %}
+
+{% block header_title %}Create New VPS{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard') }}" class="breadcrumb-item">Dashboard</a>
+    <span class="breadcrumb-separator"><i class="fas fa-chevron-right"></i></span>
+    <a href="{{ url_for('admin_dashboard') }}" class="breadcrumb-item">Admin</a>
+    <span class="breadcrumb-separator"><i class="fas fa-chevron-right"></i></span>
+    <a href="{{ url_for('admin_vps') }}" class="breadcrumb-item">VPS</a>
+    <span class="breadcrumb-separator"><i class="fas fa-chevron-right"></i></span>
+    <span class="breadcrumb-item active">Create</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="glass-card p-6 md:p-8 max-w-5xl mx-auto shadow-glow">
+    <div class="border-b border-cyan-500/10 pb-6 mb-8 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-500/20 to-purple-500/10 flex items-center justify-center border border-cyan-500/30">
+            <i class="fas fa-plus-circle text-cyan-400 text-xl animate-pulse"></i>
+        </div>
+        <div>
+            <h3 class="text-xl font-bold font-display tracking-tight text-white">New Virtual Private Server</h3>
+            <p class="text-xs text-slate-400">Deploy a premium cloud server instance dynamically</p>
+        </div>
+    </div>
+
+    <form id="createVPSForm" class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="form-group flex flex-col gap-2">
+                <label class="form-label text-slate-300 font-medium text-xs uppercase tracking-wider">Owner <span class="text-red-400">*</span></label>
+                <select id="user_id" class="form-control" required>
+                    <option value="">Select user...</option>
+                    {% for user in users %}
+                    <option value="{{ user.id }}" {% if request.args.user_id == user.id|string %}selected{% endif %}>
+                        {{ user.username }} ({{ user.email }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group flex flex-col gap-2">
+                <label class="form-label text-slate-300 font-medium text-xs uppercase tracking-wider">Node <span class="text-red-400">*</span></label>
+                <select id="node_id" class="form-control" required>
+                    <option value="">Select node...</option>
+                    {% for node in nodes %}
+                    <option value="{{ node.id }}">
+                        {{ node.name }} ({{ node.location }}) - {{ node.used_vps }}/{{ node.total_vps }} VPS
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group flex flex-col gap-2">
+                <label class="form-label text-slate-300 font-medium text-xs uppercase tracking-wider">Hostname</label>
+                <input type="text" id="hostname" class="form-control" placeholder="e.g., my-vps-01">
+                <small class="text-[11px] text-slate-400">Leave blank for auto-generated name</small>
+            </div>
+
+            <div class="form-group flex flex-col gap-2">
+                <label class="form-label text-slate-300 font-medium text-xs uppercase tracking-wider">Operating System <span class="text-red-400">*</span></label>
+                <select id="os_version" class="form-control" required>
+                    {% for os in os_options %}
+                    <option value="{{ os.value }}" {% if loop.index == 1 %}selected{% endif %}>
+                        {{ os.label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group flex flex-col gap-2">
+                <label class="form-label text-slate-300 font-medium text-xs uppercase tracking-wider">CPU Cores <span class="text-red-400">*</span></label>
+                <input type="number" id="cpu" class="form-control" value="2" min="1" max="64" required>
+            </div>
+
+            <div class="form-group flex flex-col gap-2">
+                <label class="form-label text-slate-300 font-medium text-xs uppercase tracking-wider">RAM (GB) <span class="text-red-400">*</span></label>
+                <input type="number" id="ram" class="form-control" value="2" min="1" max="128" required>
+            </div>
+
+            <div class="form-group flex flex-col gap-2">
+                <label class="form-label text-slate-300 font-medium text-xs uppercase tracking-wider">Disk (GB) <span class="text-red-400">*</span></label>
+                <input type="number" id="disk" class="form-control" value="20" min="5" max="2000" required>
+            </div>
+
+            <div class="form-group flex flex-col gap-2">
+                <label class="form-label text-slate-300 font-medium text-xs uppercase tracking-wider">IP Address</label>
+                <input type="text" id="ip_address" class="form-control" placeholder="e.g., 10.0.0.100">
+            </div>
+
+            <div class="form-group flex flex-col gap-2 md:col-span-2">
+                <label class="form-label text-slate-300 font-medium text-xs uppercase tracking-wider">IP Alias (Display)</label>
+                <input type="text" id="ip_alias" class="form-control" placeholder="e.g., vps1.example.com">
+            </div>
+        </div>
+
+        <!-- Auto-Expiration Settings -->
+        <div class="mt-8 p-6 bg-slate-900/40 rounded-2xl border border-cyan-500/10 shadow-inner backdrop-blur-md">
+            <h4 class="text-sm font-semibold font-display tracking-wider text-cyan-400 uppercase flex items-center gap-2 mb-4">
+                <i class="fas fa-clock text-xs"></i>
+                Auto-Expiration Settings
+            </h4>
+            
+            <div class="form-group mb-4">
+                <label class="flex items-center gap-3 cursor-pointer select-none text-slate-200 hover:text-white transition-colors">
+                    <input type="checkbox" id="auto_suspend_enabled" class="w-4 h-4 rounded text-cyan-500 focus:ring-cyan-500/30 border-cyan-500/30 bg-slate-800">
+                    <span class="text-sm font-medium">Enable Auto-Suspend on Expiration</span>
+                </label>
+                <small class="text-[11px] text-slate-400 block mt-1.5 ml-7">
+                    When enabled, VPS will automatically suspend after the specified number of days
+                </small>
+            </div>
+
+            <div id="expiration-settings" class="hidden mt-6 space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="form-group flex flex-col gap-2">
+                        <label class="form-label text-slate-300 font-medium text-xs uppercase tracking-wider">Expiration Days</label>
+                        <input type="number" id="expiration_days" class="form-control" value="30" min="1" max="365">
+                        <small class="text-[11px] text-slate-400">Number of days until VPS expires</small>
+                    </div>
+
+                    <div class="form-group flex flex-col gap-2">
+                        <label class="form-label text-slate-300 font-medium text-xs uppercase tracking-wider">Expiration Date (Preview)</label>
+                        <input type="text" id="expiration_preview" class="form-control bg-slate-950/50 cursor-not-allowed" readonly>
+                        <small class="text-[11px] text-slate-400">Calculated expiration date</small>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-cyan-950/10 border-l-4 border-cyan-500 rounded-r-xl">
+                    <div class="flex gap-3">
+                        <i class="fas fa-info-circle text-cyan-400 mt-1"></i>
+                        <div class="text-xs text-slate-300 space-y-1">
+                            <strong class="text-cyan-400">How Auto-Expiration Works:</strong>
+                            <ul class="list-disc list-inside space-y-1 mt-1 opacity-95">
+                                <li>VPS will be automatically suspended after the specified days</li>
+                                <li>User receives warning notification 3 days before expiration</li>
+                                <li>Admin can renew VPS at any time to extend the expiration date</li>
+                                <li>Suspended VPS can be unsuspended and renewed by admin</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resource Summary -->
+        <div class="mt-8 p-6 bg-purple-950/10 rounded-2xl border border-purple-500/10 backdrop-blur-md flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+                <h4 class="text-sm font-semibold font-display tracking-wider text-purple-400 uppercase flex items-center gap-2 mb-1">
+                    <i class="fas fa-chart-pie text-xs animate-pulse"></i>
+                    Resource Allocation Summary
+                </h4>
+                <p class="text-[11px] text-slate-400">Double check specifications before initiating deployment</p>
+            </div>
+            <div class="flex gap-4 md:gap-8 flex-wrap">
+                <div class="px-4 py-2 bg-slate-950/40 rounded-xl border border-white/5 text-center min-w-[90px]">
+                    <span class="text-[10px] text-slate-400 uppercase tracking-widest block mb-0.5">Total CPU</span>
+                    <span id="summary-cpu" class="text-sm font-mono font-bold text-cyan-400">2 cores</span>
+                </div>
+                <div class="px-4 py-2 bg-slate-950/40 rounded-xl border border-white/5 text-center min-w-[90px]">
+                    <span class="text-[10px] text-slate-400 uppercase tracking-widest block mb-0.5">Total RAM</span>
+                    <span id="summary-ram" class="text-sm font-mono font-bold text-purple-400">2 GB</span>
+                </div>
+                <div class="px-4 py-2 bg-slate-950/40 rounded-xl border border-white/5 text-center min-w-[90px]">
+                    <span class="text-[10px] text-slate-400 uppercase tracking-widest block mb-0.5">Storage</span>
+                    <span id="summary-disk" class="text-sm font-mono font-bold text-white">20 GB</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex gap-4 justify-end pt-6 border-t border-white/5">
+            <a href="{{ url_for('admin_vps') }}" class="btn btn-secondary px-6 py-2.5 rounded-full text-sm font-semibold">
+                Cancel
+            </a>
+            <button type="submit" class="btn btn-primary px-8 py-2.5 rounded-full text-sm font-semibold flex items-center gap-2 shadow-glow">
+                <i class="fas fa-rocket text-xs"></i> <span>Create VPS</span>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Update summary
+    document.getElementById('cpu').addEventListener('input', function(e) {
+        document.getElementById('summary-cpu').textContent = e.target.value + ' cores';
+    });
+
+    document.getElementById('ram').addEventListener('input', function(e) {
+        document.getElementById('summary-ram').textContent = e.target.value + ' GB';
+    });
+
+    document.getElementById('disk').addEventListener('input', function(e) {
+        document.getElementById('summary-disk').textContent = e.target.value + ' GB';
+    });
+
+    // Toggle expiration settings
+    document.getElementById('auto_suspend_enabled').addEventListener('change', function(e) {
+        const expirationSettings = document.getElementById('expiration-settings');
+        if (e.target.checked) {
+            expirationSettings.classList.remove('hidden');
+            updateExpirationPreview();
+        } else {
+            expirationSettings.classList.add('hidden');
+        }
+    });
+
+    // Update expiration preview
+    function updateExpirationPreview() {
+        const days = parseInt(document.getElementById('expiration_days').value) || 30;
+        const now = new Date();
+        const expirationDate = new Date(now.getTime() + (days * 24 * 60 * 60 * 1000));
+        
+        const formatted = expirationDate.toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        document.getElementById('expiration_preview').value = formatted + ` (${days} days from now)`;
+    }
+
+    document.getElementById('expiration_days').addEventListener('input', updateExpirationPreview);
+
+    // Form submission
+    document.getElementById('createVPSForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const user_id = document.getElementById('user_id').value;
+        const node_id = document.getElementById('node_id').value;
+        const hostname = document.getElementById('hostname').value;
+        const os_version = document.getElementById('os_version').value;
+        const cpu = document.getElementById('cpu').value;
+        const ram = document.getElementById('ram').value;
+        const disk = document.getElementById('disk').value;
+        const ip_address = document.getElementById('ip_address').value;
+        const ip_alias = document.getElementById('ip_alias').value;
+        const auto_suspend_enabled = document.getElementById('auto_suspend_enabled').checked;
+        const expiration_days = auto_suspend_enabled ? parseInt(document.getElementById('expiration_days').value) : 0;
+
+        if (!user_id || !node_id || !os_version) {
+            showToast('Please fill in all required fields', 'warning');
+            return;
+        }
+
+        if (auto_suspend_enabled && (!expiration_days || expiration_days < 1)) {
+            showToast('Please enter a valid expiration period (minimum 1 day)', 'warning');
+            return;
+        }
+
+        showLoading();
+
+        try {
+            const response = await fetch('/admin/vps/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user_id: parseInt(user_id),
+                    node_id: parseInt(node_id),
+                    hostname: hostname,
+                    os_version: os_version,
+                    cpu: parseInt(cpu),
+                    ram: parseInt(ram),
+                    disk: parseInt(disk),
+                    ip_address: ip_address || null,
+                    ip_alias: ip_alias || null,
+                    auto_suspend_enabled: auto_suspend_enabled,
+                    expiration_days: expiration_days
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                let message = `VPS created successfully: ${result.container_name}`;
+                if (auto_suspend_enabled) {
+                    message += ` (Expires in ${expiration_days} days)`;
+                }
+                showToast(message, 'success');
+                setTimeout(() => {
+                    window.location.href = "{{ url_for('admin_vps') }}";
+                }, 2000);
+            } else {
+                showToast(result.error || 'Failed to create VPS', 'danger');
+            }
+        } catch (error) {
+            console.error('Create VPS error:', error);
+            showToast('Network error: ' + error.message, 'danger');
+        } finally {
+            hideLoading();
+        }
+    });
+</script>
+{% endblock %}

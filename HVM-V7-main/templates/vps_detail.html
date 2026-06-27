@@ -1,0 +1,1769 @@
+{% extends "base.html" %}
+
+{% block title %}{{ vps.hostname or vps.container_name }} - {{ panel_name }}{% endblock %}
+
+{% block header_title %}{{ vps.hostname or vps.container_name }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="flex items-center gap-2 mb-6 text-xs text-slate-500 font-display">
+    <a href="{{ url_for('dashboard') }}" class="hover:text-indigo-400 transition">Dashboard</a>
+    <span><i class="fas fa-chevron-right text-[10px]"></i></span>
+    <a href="{{ url_for('vps_list') }}" class="hover:text-indigo-400 transition">My VPS</a>
+    <span><i class="fas fa-chevron-right text-[10px]"></i></span>
+    <span class="text-slate-300 font-medium">{{ vps.hostname or vps.container_name }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- VPS Header & Power Controls Card -->
+    <div class="glass-panel rounded-2xl p-6 relative overflow-hidden">
+        <div class="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-indigo-500/5 blur-3xl"></div>
+        
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+            <!-- Left Info Block -->
+            <div class="flex items-center gap-4">
+                <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/15 border border-white/10 flex items-center justify-center text-indigo-400 shadow-xl shrink-0">
+                    <i class="fas fa-server text-2xl"></i>
+                </div>
+                <div class="space-y-1.5">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h2 class="font-display font-bold text-xl md:text-2xl text-white tracking-tight">{{ vps.hostname or vps.container_name }}</h2>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-900 border border-white/5 font-mono text-[10px] font-bold text-slate-400">ID: {{ vps.id }}</span>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-400">
+                        <span class="flex items-center gap-1.5"><i class="fas fa-calendar text-[10px] text-slate-500"></i> Created {{ vps.created_at|relative_time }}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="relative flex h-2 w-2">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 {% if vps.suspended %}bg-rose-400{% elif stats.status == 'running' %}bg-emerald-400{% else %}bg-amber-400{% endif %}"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 {% if vps.suspended %}bg-rose-500{% elif stats.status == 'running' %}bg-emerald-500{% else %}bg-amber-500{% endif %}"></span>
+                            </span>
+                            <span class="font-bold text-[11px] uppercase tracking-wider {% if vps.suspended %}text-rose-400{% elif stats.status == 'running' %}text-emerald-400{% else %}text-amber-400{% endif %}">
+                                {% if vps.suspended %}Suspended{% elif stats.status == 'running' %}Running{% else %}Stopped{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Action Block -->
+            <div class="flex flex-wrap items-center gap-2.5">
+                {% if not vps.suspended %}
+                <button class="px-4 py-2 text-xs font-bold rounded-xl transition flex items-center gap-2 cursor-pointer shadow-lg {% if stats.status == 'running' %}bg-amber-600 hover:bg-amber-500 text-white shadow-amber-600/10{% else %}bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/10{% endif %}"
+                        onclick="controlVPS('{{ vps.id }}', '{% if stats.status == 'running' %}stop{% else %}start{% endif %}')">
+                    <i class="fas fa-{% if stats.status == 'running' %}stop{% else %}play{% endif %}"></i>
+                    <span>{% if stats.status == 'running' %}Stop{% else %}Start{% endif %}</span>
+                </button>
+               
+                {% if stats.status == 'running' %}
+                <button class="px-4 py-2 text-xs font-bold rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-white/5 hover:border-white/10 transition flex items-center gap-2 cursor-pointer" onclick="controlVPS('{{ vps.id }}', 'restart')">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>Restart</span>
+                </button>
+                {% endif %}
+               
+                <a href="{{ url_for('vps_console', vps_id=vps.id) }}" class="px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/25 transition flex items-center gap-2">
+                    <i class="fas fa-terminal"></i>
+                    <span>Console</span>
+                </a>
+                
+                <a href="{{ url_for('vps_files', vps_id=vps.id) }}" class="px-4 py-2 text-xs font-bold rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-white/5 hover:border-white/10 transition flex items-center gap-2">
+                    <i class="fas fa-folder-open"></i>
+                    <span>Files</span>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Resource Stats Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- CPU Usage -->
+        <div class="glass-panel rounded-2xl p-5 md:p-6 space-y-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                        <i class="fas fa-microchip"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">CPU Allocation</p>
+                        <h4 class="font-display font-bold text-slate-200 text-xs mt-0.5">{{ vps.cpu }} Cores Allocated</h4>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="font-mono font-bold text-2xl text-white vps-cpu" data-id="{{ vps.id }}">
+                        {% if stats.status == 'running' %}{{ (stats.cpu|default(0))|round(1) }}%{% else %}0.0%{% endif %}
+                    </span>
+                </div>
+            </div>
+
+            {% if stats.status == 'running' %}
+            <div class="space-y-1.5">
+                <div class="w-full h-2 rounded-full bg-slate-950 overflow-hidden relative border border-white/[0.03]">
+                    <div class="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-1000 cpu-progress" style="width: {{ stats.cpu|default(0) }}%;">
+                        <div class="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.15)_50%,transparent_100%)] animate-[shimmer_1.5s_infinite]"></div>
+                    </div>
+                </div>
+                <div class="flex justify-between text-[10px] font-semibold text-slate-500 uppercase tracking-wider font-mono">
+                    <span>Utilization rate</span>
+                    <span>{{ (stats.cpu|default(0))|round(1) }}% Used</span>
+                </div>
+            </div>
+            {% else %}
+            <div class="py-2 text-center text-xs text-slate-500 italic">
+                VPS is stopped
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- RAM Usage -->
+        <div class="glass-panel rounded-2xl p-5 md:p-6 space-y-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                        <i class="fas fa-memory"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Memory Allocation</p>
+                        <h4 class="font-display font-bold text-slate-200 text-xs mt-0.5">{{ vps.ram }} Configured</h4>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="font-mono font-bold text-2xl text-white vps-ram-pct" data-id="{{ vps.id }}">
+                        {% if stats.status == 'running' %}{{ (stats.ram.pct|default(0))|round(1) }}%{% else %}0.0%{% endif %}
+                    </span>
+                </div>
+            </div>
+
+            {% if stats.status == 'running' %}
+            <div class="space-y-1.5">
+                <div class="w-full h-2 rounded-full bg-slate-950 overflow-hidden relative border border-white/[0.03]">
+                    <div class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-1000 ram-progress" style="width: {{ stats.ram.pct|default(0) }}%;">
+                        <div class="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.15)_50%,transparent_100%)] animate-[shimmer_1.5s_infinite]"></div>
+                    </div>
+                </div>
+                <div class="flex justify-between text-[10px] font-semibold text-slate-500 uppercase tracking-wider font-mono">
+                    <span class="vps-ram-used" data-id="{{ vps.id }}">{{ (stats.ram.used|default(0))|round }}MB / {{ stats.ram.total|default(0) }}MB</span>
+                    <span>{{ (stats.ram.pct|default(0))|round(1) }}% Used</span>
+                </div>
+            </div>
+            {% else %}
+            <div class="py-2 text-center text-xs text-slate-500 italic">
+                VPS is stopped
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Disk Usage -->
+        <div class="glass-panel rounded-2xl p-5 md:p-6 space-y-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                        <i class="fas fa-hdd"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Disk Capacity</p>
+                        <h4 class="font-display font-bold text-slate-200 text-xs mt-0.5">{{ vps.storage }} SSD Storage</h4>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="font-mono font-bold text-2xl text-white vps-disk" data-id="{{ vps.id }}">
+                        {% if stats.status == 'running' and stats.disk.use_percent|default('0%') != 'Unknown' %}{{ stats.disk.use_percent|default('0%') }}{% else %}0%{% endif %}
+                    </span>
+                </div>
+            </div>
+
+            {% if stats.status == 'running' and stats.disk.use_percent|default('0%') != 'Unknown' %}
+            <div class="space-y-1.5">
+                <div class="w-full h-2 rounded-full bg-slate-950 overflow-hidden relative border border-white/[0.03]">
+                    <div class="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-1000 disk-progress" style="width: {{ stats.disk.use_percent|default('0%')|replace('%','') }}%;">
+                        <div class="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.15)_50%,transparent_100%)] animate-[shimmer_1.5s_infinite]"></div>
+                    </div>
+                </div>
+                <div class="flex justify-between text-[10px] font-semibold text-slate-500 uppercase tracking-wider font-mono">
+                    <span>{{ vps.storage }} SSD</span>
+                    <span>{{ stats.disk.use_percent|default('0%') }} Used</span>
+                </div>
+            </div>
+            {% else %}
+            <div class="py-2 text-center text-xs text-slate-500 italic">
+                {% if stats.status == 'running' %}Calculating disk limits...{% else %}VPS is stopped{% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Navigation Tabs Menu -->
+    <div class="flex gap-1.5 overflow-x-auto pb-1 border-b border-white/5 scrollbar-thin">
+        <button class="px-4 py-2.5 rounded-xl text-xs font-bold font-display cursor-pointer transition-all flex items-center gap-2 shrink-0 active tab-modern" onclick="showTab('overview')">
+            <i class="fas fa-home"></i>
+            <span>Overview</span>
+        </button>
+        <button class="px-4 py-2.5 rounded-xl text-xs font-bold font-display cursor-pointer transition-all flex items-center gap-2 shrink-0 text-slate-400 hover:text-white tab-modern" onclick="showTab('performance')">
+            <i class="fas fa-chart-line"></i>
+            <span>Performance</span>
+        </button>
+        <button class="px-4 py-2.5 rounded-xl text-xs font-bold font-display cursor-pointer transition-all flex items-center gap-2 shrink-0 text-slate-400 hover:text-white tab-modern" onclick="showTab('network')">
+            <i class="fas fa-network-wired"></i>
+            <span>Network</span>
+        </button>
+        <button class="px-4 py-2.5 rounded-xl text-xs font-bold font-display cursor-pointer transition-all flex items-center gap-2 shrink-0 text-slate-400 hover:text-white tab-modern" onclick="showTab('ports')">
+            <i class="fas fa-plug"></i>
+            <span>Port Forwarding</span>
+        </button>
+        <button class="px-4 py-2.5 rounded-xl text-xs font-bold font-display cursor-pointer transition-all flex items-center gap-2 shrink-0 text-slate-400 hover:text-white tab-modern" onclick="showTab('settings')">
+            <i class="fas fa-cog"></i>
+            <span>Settings</span>
+        </button>
+    </div>
+
+    <!-- Overview Tab Panel -->
+    <div id="tab-overview" class="tab-content block space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <!-- System details list -->
+            <div class="lg:col-span-7 glass-panel rounded-2xl p-5 md:p-6">
+                <div class="flex items-center gap-3 pb-4 border-b border-white/5 mb-4">
+                    <div class="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                        <i class="fas fa-info-circle text-sm"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-display font-bold text-sm text-white">System Diagnostics</h3>
+                        <p class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Instance specification</p>
+                    </div>
+                </div>
+
+                <div class="space-y-3.5">
+                    <div class="flex justify-between items-center text-xs py-1.5 border-b border-white/[0.03]">
+                        <span class="text-slate-400 font-medium">Hostname</span>
+                        <span class="text-slate-200 font-semibold">{{ vps.hostname or vps.container_name }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs py-1.5 border-b border-white/[0.03]">
+                        <span class="text-slate-400 font-medium">Container Instance</span>
+                        <span class="text-slate-200 font-mono text-[11px]">{{ vps.container_name }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs py-1.5 border-b border-white/[0.03]">
+                        <span class="text-slate-400 font-medium">Operating System</span>
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] font-semibold">
+                            <i class="{{ os_icon|get_os_icon }}"></i> {{ vps.os_version }}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs py-1.5 border-b border-white/[0.03]">
+                        <span class="text-slate-400 font-medium">Status</span>
+                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider {% if vps.suspended %}bg-rose-500/10 text-rose-400 border border-rose-500/20{% elif stats.status == 'running' %}bg-emerald-500/10 text-emerald-400 border border-emerald-500/20{% else %}bg-amber-500/10 text-amber-400 border border-amber-500/20{% endif %}">
+                            {{ 'Suspended' if vps.suspended else (stats.status|upper) }}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs py-1.5 border-b border-white/[0.03]">
+                        <span class="text-slate-400 font-medium">Node / Location</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-slate-200 font-semibold">{{ node.name }}</span>
+                            <span class="px-1.5 py-0.5 rounded bg-slate-900 border border-white/5 text-slate-400 text-[10px] font-mono">{{ node.location }}</span>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center text-xs py-1.5 border-b border-white/[0.03]">
+                        <span class="text-slate-400 font-medium">Primary IP</span>
+                        <span class="text-slate-200 font-mono font-semibold">
+                            {% if vps.ip_address %}
+                            {{ vps.ip_address }}
+                            {% elif vps.ip_alias %}
+                            {{ vps.ip_alias }} <span class="ml-1 px-1 py-0.5 text-[9px] font-bold rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/15">Alias</span>
+                            {% else %}
+                            <span class="text-slate-600">Unassigned</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs py-1.5 border-b border-white/[0.03]">
+                        <span class="text-slate-400 font-medium">Private Address</span>
+                        <span class="text-slate-200 font-mono font-semibold">{{ private_ip }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs py-1.5 border-b border-white/[0.03]">
+                        <span class="text-slate-400 font-medium">Creation Date</span>
+                        <span class="text-slate-400 font-mono text-[11px]">{{ vps.created_at|relative_time }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs py-1.5 border-b border-white/[0.03] last:border-0">
+                        <span class="text-slate-400 font-medium">Last Boot</span>
+                        <span class="text-slate-400 font-mono text-[11px]">{{ vps.last_started|relative_time if vps.last_started else 'Never' }}</span>
+                    </div>
+                    {% if stats.status == 'running' %}
+                    <div class="flex justify-between items-center text-xs py-1.5 border-b border-white/[0.03]">
+                        <span class="text-slate-400 font-medium">Active Uptime</span>
+                        <span class="text-slate-200 font-semibold">{{ stats.uptime|default('N/A') }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs last:border-0 pt-1.5">
+                        <span class="text-slate-400 font-medium">Processes count</span>
+                        <span class="text-slate-200 font-mono font-bold">{{ stats.processes|default('N/A') }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Expiration details block -->
+            <div class="lg:col-span-5 glass-panel rounded-2xl p-5 md:p-6 space-y-4">
+                <div class="flex items-center gap-3 pb-4 border-b border-white/5">
+                    <div class="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                        <i class="fas fa-clock text-sm"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-display font-bold text-sm text-white">Expiration Audit</h3>
+                        <p class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Lease terms</p>
+                    </div>
+                </div>
+
+                {% if vps.auto_suspend_enabled and vps.expires_at %}
+                {% set expires_dt = vps.expires_at|parse_datetime %}
+                {% if expires_dt %}
+                {% set current_time = now() %}
+                {% set time_diff = (expires_dt - current_time).total_seconds() %}
+                {% set days_left = (time_diff / 86400)|int %}
+                {% set hours_left = (time_diff / 3600)|int %}
+                {% set is_expired = days_left < 0 %}
+
+                <div class="rounded-xl border p-4 flex flex-col gap-4 {% if is_expired %}bg-rose-500/5 border-rose-500/15{% elif days_left <= 3 %}bg-rose-500/5 border-rose-500/15{% elif days_left <= 7 %}bg-amber-500/5 border-amber-500/15{% else %}bg-emerald-500/5 border-emerald-500/15{% endif %}">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center {% if is_expired or days_left <= 3 %}bg-rose-500/10 text-rose-400{% elif days_left <= 7 %}bg-amber-500/10 text-amber-400{% else %}bg-emerald-500/10 text-emerald-400{% endif %}">
+                                <i class="fas fa-{% if is_expired %}exclamation-triangle{% else %}clock{% endif %}"></i>
+                            </div>
+                            <div>
+                                <p class="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Lease duration</p>
+                                <h4 class="font-display font-bold text-sm text-white">
+                                    {% if is_expired %}
+                                        EXPIRED
+                                    {% elif days_left == 0 %}
+                                        {{ hours_left }} Hours Left
+                                    {% elif days_left <= 3 %}
+                                        {{ days_left }} Days Left
+                                    {% else %}
+                                        {{ days_left }} Days Remaining
+                                    {% endif %}
+                                </h4>
+                            </div>
+                        </div>
+
+                        {% if is_expired %}
+                            <span class="px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[10px] font-bold uppercase tracking-wide">Expired</span>
+                        {% elif days_left <= 1 %}
+                            <span class="px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[10px] font-bold uppercase tracking-wide animate-pulse">Critical</span>
+                        {% elif days_left <= 3 %}
+                            <span class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-bold uppercase tracking-wide">Expiring</span>
+                        {% else %}
+                            <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold uppercase tracking-wide">Active</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="space-y-2 text-xs border-t border-white/5 pt-3">
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Expiration Date</span>
+                            <span class="text-slate-200 font-mono font-semibold">{{ expires_dt.strftime('%Y-%m-%d %H:%M') }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Duration Left</span>
+                            <span class="font-mono font-semibold {% if is_expired %}text-rose-400{% else %}text-slate-200{% endif %}">
+                                {% if is_expired %}
+                                    Expired {{ (days_left * -1) }} days ago
+                                {% elif days_left == 0 %}
+                                    {{ hours_left }} hours
+                                {% else %}
+                                    {{ days_left }} days, {{ (hours_left % 24) }} hours
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">Total Period</span>
+                            <span class="text-slate-200 font-semibold">{{ vps.expiration_days }} days</span>
+                        </div>
+                    </div>
+
+                    {% if is_expired or days_left <= 7 %}
+                    <div class="p-3 rounded-lg flex items-start gap-2.5 text-xs text-rose-400 bg-rose-500/5 border border-rose-500/10">
+                        <i class="fas fa-exclamation-triangle mt-0.5"></i>
+                        <div>
+                            <strong class="font-bold text-slate-100">Action Required</strong>
+                            <p class="text-slate-400 mt-1 leading-relaxed">
+                                {% if is_expired %}
+                                This instance has reached expiration. To extend usage and reinstate operations, please contact an administrative supervisor.
+                                {% else %}
+                                Instance is reaching termination soon. Kindly request a supervisor to extend your lease date.
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="py-12 text-center flex flex-col items-center justify-center">
+                    <div class="w-12 h-12 rounded-xl bg-slate-900 border border-white/5 flex items-center justify-center text-slate-500 mb-3">
+                        <i class="fas fa-infinity text-lg"></i>
+                    </div>
+                    <h4 class="font-display font-bold text-sm text-slate-400">Infinite Lease Term</h4>
+                    <p class="text-xs text-slate-600 mt-1 max-w-xs">This VPS has no expiration terms configured.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick actions layout list -->
+        <div class="glass-panel rounded-2xl p-5 md:p-6 space-y-4">
+            <div class="flex items-center gap-3 pb-4 border-b border-white/5">
+                <div class="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                    <i class="fas fa-bolt text-sm"></i>
+                </div>
+                <div>
+                    <h3 class="font-display font-bold text-sm text-white">Interactive Commands</h3>
+                    <p class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Immediate triggers</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                {% if stats.status == 'running' and not vps.suspended %}
+                <button onclick="generateSSH()" class="p-4 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-white/5 hover:border-indigo-500/25 transition-all text-left flex gap-3.5 items-center group cursor-pointer shadow-sm">
+                    <div class="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/15 group-hover:bg-indigo-500/20 group-hover:border-indigo-500/30 text-indigo-400 flex items-center justify-center transitionshrink-0">
+                        <i class="fas fa-terminal"></i>
+                    </div>
+                    <div class="space-y-0.5 overflow-hidden">
+                        <h4 class="font-display font-bold text-xs text-white">Spawn SSH</h4>
+                        <p class="text-[10px] text-slate-500 truncate">Generate login details</p>
+                    </div>
+                </button>
+                {% endif %}
+
+                <button onclick="showReinstallModal()" class="p-4 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-white/5 hover:border-amber-500/25 transition-all text-left flex gap-3.5 items-center group cursor-pointer shadow-sm">
+                    <div class="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/15 group-hover:bg-amber-500/20 group-hover:border-amber-500/30 text-amber-400 flex items-center justify-center transition shrink-0">
+                        <i class="fas fa-redo-alt"></i>
+                    </div>
+                    <div class="space-y-0.5 overflow-hidden">
+                        <h4 class="font-display font-bold text-xs text-white">Reinstall OS</h4>
+                        <p class="text-[10px] text-slate-500 truncate">Rebuild image</p>
+                    </div>
+                </button>
+
+                <button onclick="showRenameModal()" class="p-4 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-white/5 hover:border-emerald-500/25 transition-all text-left flex gap-3.5 items-center group cursor-pointer shadow-sm">
+                    <div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/15 group-hover:bg-emerald-500/20 group-hover:border-emerald-500/30 text-emerald-400 flex items-center justify-center transition shrink-0">
+                        <i class="fas fa-pen"></i>
+                    </div>
+                    <div class="space-y-0.5 overflow-hidden">
+                        <h4 class="font-display font-bold text-xs text-white">Rename Node</h4>
+                        <p class="text-[10px] text-slate-500 truncate">Change hostname</p>
+                    </div>
+                </button>
+
+                {% if current_user.is_admin and not vps.whitelisted %}
+                <button onclick="suspendVPS()" class="p-4 rounded-xl bg-slate-900/60 hover:bg-slate-800/80 border border-white/5 hover:border-rose-500/25 transition-all text-left flex gap-3.5 items-center group cursor-pointer shadow-sm">
+                    <div class="w-10 h-10 rounded-lg bg-rose-500/10 border border-rose-500/15 group-hover:bg-rose-500/20 group-hover:border-rose-500/30 text-rose-400 flex items-center justify-center transition shrink-0">
+                        <i class="fas fa-ban"></i>
+                    </div>
+                    <div class="space-y-0.5 overflow-hidden">
+                        <h4 class="font-display font-bold text-xs text-white">Suspend VPS</h4>
+                        <p class="text-[10px] text-slate-500 truncate">Halt instance access</p>
+                    </div>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Graphs Tab Panel -->
+    <div id="tab-performance" class="tab-content hidden space-y-6">
+        <div class="glass-panel rounded-2xl p-5 md:p-6">
+            <div class="flex items-center justify-between pb-4 border-b border-white/5 mb-5">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                        <i class="fas fa-chart-line text-sm"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-display font-bold text-sm text-white">Resource Metrics Over Time</h3>
+                        <p class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Live telemetry monitoring</p>
+                    </div>
+                </div>
+                <button onclick="refreshCharts()" class="px-3 py-1.5 text-xs font-bold rounded-lg border border-white/5 hover:border-indigo-500/20 bg-slate-950 text-slate-300 hover:text-white transition flex items-center gap-1.5 cursor-pointer">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>Flush Charts</span>
+                </button>
+            </div>
+
+            {% if stats.status == 'running' %}
+            <div class="space-y-8">
+                <!-- CPU Usage -->
+                <div class="space-y-3">
+                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">CPU Utilization</h4>
+                    <div class="h-64 relative bg-slate-950/20 border border-white/[0.03] rounded-xl p-4">
+                        <canvas id="cpuChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- RAM Usage -->
+                <div class="space-y-3">
+                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Memory Allocation</h4>
+                    <div class="h-64 relative bg-slate-950/20 border border-white/[0.03] rounded-xl p-4">
+                        <canvas id="ramChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Network Traffic -->
+                <div class="space-y-3">
+                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Network Throughput</h4>
+                    <div class="h-64 relative bg-slate-950/20 border border-white/[0.03] rounded-xl p-4">
+                        <canvas id="networkChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="py-16 text-center flex flex-col items-center justify-center">
+                <div class="w-16 h-16 rounded-2xl bg-slate-900 border border-white/5 flex items-center justify-center text-indigo-400 mb-4 shadow-xl">
+                    <i class="fas fa-chart-line text-2xl"></i>
+                </div>
+                <h3 class="font-display font-bold text-base text-slate-300">Diagnostics Unavailable</h3>
+                <p class="text-xs text-slate-500 mt-2 max-w-sm">Start the VPS instance to initialize telemetric resource charts.</p>
+                <button class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow-lg shadow-indigo-600/20 mt-5 cursor-pointer" onclick="controlVPS('{{ vps.id }}', 'start')">
+                    <i class="fas fa-play mr-1.5"></i> Start Instance
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Network Configuration Tab Panel -->
+    <div id="tab-network" class="tab-content hidden space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            <!-- IPv4 information -->
+            <div class="glass-panel rounded-2xl p-5 md:p-6">
+                <div class="flex items-center gap-3 pb-4 border-b border-white/5 mb-4">
+                    <div class="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                        <i class="fas fa-globe text-sm"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-display font-bold text-sm text-white">Network Allocations</h3>
+                        <p class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Internet facing details</p>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center text-xs py-1.5 border-b border-white/[0.03]">
+                        <span class="text-slate-400">Public IPv4 Address</span>
+                        <span class="text-slate-200 font-mono font-bold">{{ display_ip }}</span>
+                    </div>
+                    {% if vps.ip_alias %}
+                    <div class="flex justify-between items-center text-xs py-1.5 border-b border-white/[0.03]">
+                        <span class="text-slate-400">IP Alias Gateway</span>
+                        <span class="text-slate-200 font-mono font-semibold">{{ vps.ip_alias }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="flex justify-between items-center text-xs py-1.5 border-b border-white/[0.03]">
+                        <span class="text-slate-400">Internal Subnet Address</span>
+                        <span class="text-slate-200 font-mono font-semibold">{{ private_ip }}</span>
+                    </div>
+                    {% if stats.status == 'running' and stats.network %}
+                    <div class="flex justify-between items-center text-xs py-1.5 border-b border-white/[0.03]">
+                        <span class="text-slate-400">Network Packets Inbound</span>
+                        <span class="text-slate-200 font-semibold">{{ stats.network.rx|default('0 B') }}</span>
+                    </div>
+                    <div class="flex justify-between items-center text-xs last:border-0 pt-1.5">
+                        <span class="text-slate-400">Network Packets Outbound</span>
+                        <span class="text-slate-200 font-semibold">{{ stats.network.tx|default('0 B') }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Port Forwards small preview list -->
+            <div class="glass-panel rounded-2xl p-5 md:p-6">
+                <div class="flex items-center gap-3 pb-4 border-b border-white/5 mb-4">
+                    <div class="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                        <i class="fas fa-plug text-sm"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-display font-bold text-sm text-white">Forwarding Rules Snapshot</h3>
+                        <p class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Active gateways</p>
+                    </div>
+                </div>
+
+                {% if forwards %}
+                <div class="space-y-3 max-h-64 overflow-y-auto pr-1">
+                    {% for forward in forwards[:5] %}
+                    <div class="p-3 rounded-xl bg-slate-900/60 border border-white/5 flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2.5 font-mono text-xs">
+                            <span class="px-2 py-0.5 rounded bg-indigo-500/15 border border-indigo-500/25 text-indigo-400 font-bold text-[10px]">{{ forward.vps_port }}</span>
+                            <i class="fas fa-arrow-right text-[10px] text-slate-500"></i>
+                            <span class="px-2 py-0.5 rounded bg-slate-950 border border-white/5 text-slate-400 font-bold text-[10px]">{{ forward.host_port }}</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-[10px] font-bold">
+                            {% if 'tcp' in forward.protocol and 'udp' in forward.protocol %}
+                                <span class="px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">TCP</span>
+                                <span class="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">UDP</span>
+                            {% else %}
+                                <span class="px-1.5 py-0.5 rounded bg-slate-800 border border-white/5 text-slate-400 uppercase">{{ forward.protocol }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                    {% if forwards|length > 5 %}
+                    <div class="text-center pt-2">
+                        <button onclick="showTab('ports')" class="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition flex items-center gap-1.5 mx-auto cursor-pointer">
+                            <span>Browse all {{ forwards|length }} active mappings</span>
+                            <i class="fas fa-arrow-right text-[10px]"></i>
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="py-12 text-center flex flex-col items-center justify-center">
+                    <div class="w-10 h-10 rounded-lg bg-slate-900 border border-white/5 flex items-center justify-center text-slate-500 mb-2">
+                        <i class="fas fa-plug text-sm"></i>
+                    </div>
+                    <h4 class="font-display font-semibold text-xs text-slate-400">Zero Forwarding Mappings</h4>
+                    <p class="text-[10px] text-slate-600 mt-0.5">Use the Port Forwarding tab to expose application ports.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Port Forwarding Settings Tab Panel -->
+    <div id="tab-ports" class="tab-content hidden space-y-6">
+        <div class="glass-panel rounded-2xl overflow-hidden">
+            <div class="px-5 py-4 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                        <i class="fas fa-plug text-sm"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-display font-bold text-sm text-white">Full Port Forwarding Rules</h3>
+                        <p class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Manage routing configurations</p>
+                    </div>
+                </div>
+                
+                <button onclick="showAddPortModal()" class="px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/25 transition flex items-center gap-1.5 cursor-pointer">
+                    <i class="fas fa-plus"></i>
+                    <span>Map Custom Port</span>
+                </button>
+            </div>
+
+            {% if forwards %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-white/5 bg-slate-950/20">
+                            <th class="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider font-display">Target VPS Port</th>
+                            <th class="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider font-display">Public Host Port</th>
+                            <th class="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider font-display">Protocol Mapping</th>
+                            <th class="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider font-display">Description Tag</th>
+                            <th class="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider font-display font-mono">Date Allocated</th>
+                            <th class="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider font-display">Hits Metrics</th>
+                            <th class="px-5 py-3 text-right text-[10px] font-bold text-slate-500 uppercase tracking-wider font-display">Deallocate</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/[0.04]">
+                        {% for forward in forwards %}
+                        <tr class="hover:bg-white/[0.01] transition-colors text-xs text-slate-300">
+                            <td class="px-5 py-3.5 font-mono">
+                                <span class="inline-flex px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/15 font-bold text-[11px]">{{ forward.vps_port }}</span>
+                            </td>
+                            <td class="px-5 py-3.5 font-mono">
+                                <span class="inline-flex px-2 py-0.5 rounded bg-slate-900 text-slate-300 border border-white/5 font-bold text-[11px]">{{ forward.host_port }}</span>
+                            </td>
+                            <td class="px-5 py-3.5 font-bold">
+                                {% if 'tcp' in forward.protocol and 'udp' in forward.protocol %}
+                                    <div class="flex items-center gap-1">
+                                        <span class="px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px]">TCP</span>
+                                        <span class="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px]">UDP</span>
+                                    </div>
+                                {% else %}
+                                    <span class="px-1.5 py-0.5 rounded bg-slate-800 border border-white/5 text-slate-400 text-[10px] uppercase">{{ forward.protocol }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-5 py-3.5 text-slate-400 font-medium">
+                                {{ forward.description or '-' }}
+                            </td>
+                            <td class="px-5 py-3.5 text-slate-400 font-mono text-[11px]">
+                                {{ forward.created_at|relative_time }}
+                            </td>
+                            <td class="px-5 py-3.5">
+                                <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold font-mono">{{ forward.hits }} Hits</span>
+                            </td>
+                            <td class="px-5 py-3.5 text-right">
+                                <button onclick="removePort('{{ forward.id }}')" class="w-7 h-7 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 hover:border-rose-500/30 flex items-center justify-center cursor-pointer transition shadow-sm ml-auto" title="Remove forwarding gateway">
+                                    <i class="fas fa-trash text-[10px]"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="py-16 text-center flex flex-col items-center justify-center">
+                <div class="w-16 h-16 rounded-2xl bg-slate-900 border border-white/5 flex items-center justify-center text-indigo-400 mb-4 shadow-xl">
+                    <i class="fas fa-plug text-2xl"></i>
+                </div>
+                <h3 class="font-display font-bold text-base text-slate-300">No Port Mappings Defined</h3>
+                <p class="text-xs text-slate-500 mt-2 max-w-sm">Expose applications inside the VPS to public web addresses by creating custom mapping gateways.</p>
+                <button onclick="showAddPortModal()" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition shadow-lg shadow-indigo-600/20 mt-5 cursor-pointer">
+                    <i class="fas fa-plus mr-1.5"></i> Map Custom Port
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Password Management & Danger Settings Tab Panel -->
+    <div id="tab-settings" class="tab-content hidden space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            <!-- VPS Password controller -->
+            <div class="glass-panel rounded-2xl p-5 md:p-6 space-y-5">
+                <div class="flex items-center gap-3 pb-4 border-b border-white/5">
+                    <div class="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                        <i class="fas fa-key text-sm"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-display font-bold text-sm text-white">VPS Password Control</h3>
+                        <p class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Instance login variables</p>
+                    </div>
+                </div>
+
+                <!-- Current Password box -->
+                <div class="space-y-2">
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Current Active Password</label>
+                    <div class="flex gap-2">
+                        <div class="relative flex-1">
+                            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-[10px]"><i class="fas fa-lock"></i></span>
+                            <input type="password" id="currentPasswordDisplay" value="Loading password..." readonly class="w-full pl-8 pr-3 py-2 rounded-xl border border-white/5 bg-slate-900/60 text-slate-300 text-xs font-mono font-semibold focus:outline-none select-none">
+                        </div>
+                        <button onclick="togglePasswordVisibility()" class="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-white/5 flex items-center justify-center cursor-pointer" title="Reveal visibility">
+                            <i id="passwordToggleIcon" class="fas fa-eye text-xs"></i>
+                        </button>
+                        <button onclick="copyPassword()" class="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-white/5 flex items-center justify-center cursor-pointer" title="Copy to clipboard">
+                            <i class="fas fa-copy text-xs"></i>
+                        </button>
+                        <button onclick="refreshPassword()" class="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 text-indigo-400 hover:text-indigo-300 border border-white/5 flex items-center justify-center cursor-pointer animate-[spin_8s_linear_infinite]" title="Sync password from server">
+                            <i class="fas fa-sync-alt text-xs"></i>
+                        </button>
+                    </div>
+                    <p class="text-[10px] text-slate-500"><i class="fas fa-info-circle mr-1 text-[9px]"></i> Serves as the default root login credential for direct SSH access.</p>
+                </div>
+
+                <!-- Update password form -->
+                <form onsubmit="changeVPSPassword(event)" class="space-y-4 pt-4 border-t border-white/5">
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Create New Password</label>
+                        <div class="relative">
+                            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-[10px]"><i class="fas fa-key"></i></span>
+                            <input type="password" id="newPassword" placeholder="Minimum 8 complex characters" required minlength="8" class="w-full pl-8 pr-3 py-2 rounded-xl border border-white/5 bg-slate-900/60 text-slate-200 text-xs focus:outline-none focus:border-indigo-500/50 transition">
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Confirm Password Match</label>
+                        <div class="relative">
+                            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-[10px]"><i class="fas fa-check-circle"></i></span>
+                            <input type="password" id="confirmPassword" placeholder="Confirm password match" required minlength="8" class="w-full pl-8 pr-3 py-2 rounded-xl border border-white/5 bg-slate-900/60 text-slate-200 text-xs focus:outline-none focus:border-indigo-500/50 transition">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/20 transition cursor-pointer">
+                        <i class="fas fa-save mr-1.5"></i> Set New Password
+                    </button>
+                </form>
+            </div>
+
+            <!-- Danger Zone configs -->
+            <div class="glass-panel rounded-2xl p-5 md:p-6 space-y-5 border border-rose-500/10">
+                <div class="flex items-center gap-3 pb-4 border-b border-white/5">
+                    <div class="w-9 h-9 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400">
+                        <i class="fas fa-exclamation-triangle text-sm"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-display font-bold text-sm text-white">Danger Settings</h3>
+                        <p class="text-[10px] text-rose-500 uppercase tracking-wider font-semibold">Destructive operations</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="p-4 rounded-xl bg-slate-950/40 border border-white/5 flex items-center justify-between gap-4">
+                        <div class="space-y-0.5">
+                            <h4 class="font-display font-bold text-xs text-white">OS Reinstallation</h4>
+                            <p class="text-[10px] text-slate-500 max-w-xs">Deletes existing volume files, deploying a completely clean installation image.</p>
+                        </div>
+                        <button onclick="showReinstallModal()" class="px-4 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-amber-500/20 text-amber-400 hover:bg-amber-500/5 transition cursor-pointer shrink-0">
+                            Reinstall Image
+                        </button>
+                    </div>
+
+                    {% if current_user.is_admin %}
+                    <div class="p-4 rounded-xl bg-rose-500/[0.01] border border-rose-500/10 flex items-center justify-between gap-4">
+                        <div class="space-y-0.5">
+                            <h4 class="font-display font-bold text-xs text-rose-400">Instance Deletion</h4>
+                            <p class="text-[10px] text-slate-500 max-w-xs">Permanently unbinds allocations, deleting this container VPS and all related history.</p>
+                        </div>
+                        <button onclick="deleteVPS()" class="px-4 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 hover:border-rose-500/30 transition cursor-pointer shrink-0">
+                            Delete VPS
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Dialogs Redesigned -->
+
+<!-- Add Port Mappings Modal -->
+<div id="addPortModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300">
+    <div class="glass-panel w-full max-w-md rounded-2xl overflow-hidden shadow-2xl border border-white/10 transform scale-95 transition-all duration-300 modal-box-container">
+        <div class="px-5 py-4 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
+            <h3 class="font-display font-bold text-sm text-white flex items-center gap-2">
+                <i class="fas fa-plus text-indigo-400"></i> Map Custom Port Gateway
+            </h3>
+            <button onclick="hideModal('addPortModal')" class="w-6 h-6 rounded-lg bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center border border-white/5 cursor-pointer">&times;</button>
+        </div>
+        <div class="p-5 space-y-4">
+            <div class="space-y-1.5">
+                <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Target VPS Port</label>
+                <input type="number" id="vpsPort" placeholder="e.g. 8080" min="1" max="65535" class="w-full px-3 py-2 rounded-xl border border-white/5 bg-slate-900/60 text-slate-200 text-xs focus:outline-none focus:border-indigo-500/50 transition">
+            </div>
+
+            <div class="space-y-1.5">
+                <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Protocol Mapping</label>
+                <select id="portProtocol" class="w-full px-3 py-2 rounded-xl border border-white/5 bg-slate-900/60 text-slate-300 text-xs focus:outline-none focus:border-indigo-500/50 transition">
+                    <option value="tcp">TCP</option>
+                    <option value="udp">UDP</option>
+                    <option value="tcp,udp">TCP + UDP (Dual protocols)</option>
+                </select>
+                <p class="text-[9px] text-slate-500">Expose both TCP and UDP ports simultaneously on matching allocations.</p>
+            </div>
+
+            <div class="space-y-1.5">
+                <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Description Tag (Optional)</label>
+                <input type="text" id="portDescription" placeholder="e.g. Node Web Server" class="w-full px-3 py-2 rounded-xl border border-white/5 bg-slate-900/60 text-slate-200 text-xs focus:outline-none focus:border-indigo-500/50 transition">
+            </div>
+        </div>
+        <div class="px-5 py-4 border-t border-white/5 bg-slate-950/30 flex justify-end gap-2">
+            <button onclick="hideModal('addPortModal')" class="px-4 py-2 text-xs font-bold rounded-xl border border-white/5 hover:border-white/10 text-slate-300 hover:text-white transition cursor-pointer">Cancel</button>
+            <button onclick="addPort()" class="px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20 transition cursor-pointer">Add Port</button>
+        </div>
+    </div>
+</div>
+
+<!-- Reinstall Image Confirmation Modal -->
+<div id="reinstallModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300">
+    <div class="glass-panel w-full max-w-md rounded-2xl overflow-hidden shadow-2xl border border-white/10 transform scale-95 transition-all duration-300 modal-box-container">
+        <div class="px-5 py-4 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
+            <h3 class="font-display font-bold text-sm text-white flex items-center gap-2">
+                <i class="fas fa-redo-alt text-amber-400"></i> Reinstall Operating System
+            </h3>
+            <button onclick="hideModal('reinstallModal')" class="w-6 h-6 rounded-lg bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center border border-white/5 cursor-pointer">&times;</button>
+        </div>
+        <div class="p-5 space-y-4">
+            <div class="p-3.5 rounded-xl bg-rose-500/5 border border-rose-500/10 flex gap-2.5 text-xs text-rose-400">
+                <i class="fas fa-exclamation-triangle mt-0.5"></i>
+                <div>
+                    <strong class="font-bold text-slate-100">Wipe Confirmation Alert</strong>
+                    <p class="text-slate-400 mt-0.5">This destructive operation immediately drops all volumes on this instance, deploying a fresh image. This cannot be undone.</p>
+                </div>
+            </div>
+
+            <div class="space-y-1.5">
+                <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Select Operating System Image</label>
+                <select id="osVersion" class="w-full px-3 py-2 rounded-xl border border-white/5 bg-slate-900/60 text-slate-300 text-xs focus:outline-none focus:border-indigo-500/50 transition">
+                    <option value="ubuntu-22.04">Ubuntu 22.04 LTS</option>
+                    <option value="ubuntu-20.04">Ubuntu 20.04 LTS</option>
+                    <option value="debian-12">Debian 12</option>
+                    <option value="debian-11">Debian 11</option>
+                    <option value="centos-9">CentOS 9</option>
+                    <option value="alpine-3.18">Alpine 3.18</option>
+                </select>
+            </div>
+        </div>
+        <div class="px-5 py-4 border-t border-white/5 bg-slate-950/30 flex justify-end gap-2">
+            <button onclick="hideModal('reinstallModal')" class="px-4 py-2 text-xs font-bold rounded-xl border border-white/5 hover:border-white/10 text-slate-300 hover:text-white transition cursor-pointer">Cancel</button>
+            <button onclick="reinstallVPS()" class="px-4 py-2 text-xs font-bold rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-600/20 transition cursor-pointer">Reinstall Image</button>
+        </div>
+    </div>
+</div>
+
+<!-- Rename hostname Modal -->
+<div id="renameModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300">
+    <div class="glass-panel w-full max-w-md rounded-2xl overflow-hidden shadow-2xl border border-white/10 transform scale-95 transition-all duration-300 modal-box-container">
+        <div class="px-5 py-4 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
+            <h3 class="font-display font-bold text-sm text-white flex items-center gap-2">
+                <i class="fas fa-pen text-emerald-400"></i> Rename Instance Node
+            </h3>
+            <button onclick="hideModal('renameModal')" class="w-6 h-6 rounded-lg bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center border border-white/5 cursor-pointer">&times;</button>
+        </div>
+        <div class="p-5 space-y-4">
+            <div class="space-y-1.5">
+                <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400">New Hostname Label</label>
+                <input type="text" id="newHostname" value="{{ vps.hostname or vps.container_name }}" placeholder="my-custom-vps" class="w-full px-3 py-2 rounded-xl border border-white/5 bg-slate-900/60 text-slate-200 text-xs focus:outline-none focus:border-indigo-500/50 transition">
+            </div>
+        </div>
+        <div class="px-5 py-4 border-t border-white/5 bg-slate-950/30 flex justify-end gap-2">
+            <button onclick="hideModal('renameModal')" class="px-4 py-2 text-xs font-bold rounded-xl border border-white/5 hover:border-white/10 text-slate-300 hover:text-white transition cursor-pointer">Cancel</button>
+            <button onclick="renameVPS()" class="px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20 transition cursor-pointer">Apply Label</button>
+        </div>
+    </div>
+</div>
+
+<!-- SSH loader modal -->
+<div id="sshLoadingModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300">
+    <div class="glass-panel w-full max-w-sm rounded-2xl p-6 shadow-2xl border border-white/10 transform scale-95 transition-all duration-300 modal-box-container text-center space-y-5">
+        <div class="w-14 h-14 rounded-full border-4 border-slate-900 border-t-indigo-500 animate-spin mx-auto flex items-center justify-center"></div>
+        
+        <div class="space-y-1">
+            <h3 class="font-display font-bold text-sm text-white">Generating SSH Gateway</h3>
+            <p class="text-xs text-slate-500">Setting up your secure terminal proxy...</p>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-slate-950/60 border border-white/5 text-left text-[11px] space-y-2 text-slate-400 font-medium">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-check text-emerald-400"></i>
+                <span>Injecting secure tmate environment</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="w-3 h-3 flex items-center justify-center"><i class="fas fa-spinner fa-spin text-indigo-400"></i></span>
+                <span>Opening encryption channels</span>
+            </div>
+            <div class="flex items-center gap-2 text-slate-600">
+                <i class="fas fa-clock"></i>
+                <span>Synthesizing remote URL mappings</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SSH details Modal -->
+<div id="sshModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300">
+    <div class="glass-panel w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl border border-white/10 transform scale-95 transition-all duration-300 modal-box-container">
+        <div class="px-5 py-4 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
+            <h3 class="font-display font-bold text-sm text-white flex items-center gap-2">
+                <i class="fas fa-terminal text-indigo-400"></i> SSH Access Console
+            </h3>
+            <button onclick="hideModal('sshModal')" class="w-6 h-6 rounded-lg bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center border border-white/5 cursor-pointer">&times;</button>
+        </div>
+        <div class="p-5 space-y-4">
+            <div class="space-y-1.5">
+                <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Standard Terminal SSH Command</label>
+                <div class="relative">
+                    <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-[10px]"><i class="fas fa-terminal"></i></span>
+                    <input type="text" id="sshCommand" readonly class="w-full pl-8 pr-12 py-2 rounded-xl border border-white/5 bg-slate-900/60 text-indigo-300 text-xs font-mono font-bold focus:outline-none select-all">
+                    <button onclick="copyToClipboard('sshCommand')" class="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-slate-950 hover:bg-slate-900 border border-white/5 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer" title="Copy text">
+                        <i class="fas fa-copy text-[10px]"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="space-y-1.5">
+                <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Web Console Session URL</label>
+                <div class="relative">
+                    <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-[10px]"><i class="fas fa-globe"></i></span>
+                    <input type="text" id="webUrl" readonly class="w-full pl-8 pr-12 py-2 rounded-xl border border-white/5 bg-slate-900/60 text-slate-300 text-xs font-mono focus:outline-none select-all">
+                    <button onclick="copyToClipboard('webUrl')" class="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-slate-950 hover:bg-slate-900 border border-white/5 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer" title="Copy URL">
+                        <i class="fas fa-copy text-[10px]"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-indigo-500/5 border border-indigo-500/10 flex gap-2.5 text-xs text-indigo-400">
+                <i class="fas fa-info-circle mt-0.5"></i>
+                <div>
+                    <strong class="font-bold text-slate-100">Proxy Gateway Active</strong>
+                    <p class="text-slate-400 mt-0.5">Use your default system terminal to execute the SSH command, or simply click "Open Web SSH" below to start directly in a secure browser sandbox.</p>
+                </div>
+            </div>
+        </div>
+        <div class="px-5 py-4 border-t border-white/5 bg-slate-950/30 flex justify-end gap-2">
+            <button onclick="hideModal('sshModal')" class="px-4 py-2 text-xs font-bold rounded-xl border border-white/5 hover:border-white/10 text-slate-300 hover:text-white transition cursor-pointer">Close</button>
+            <a id="webSshLink" href="#" target="_blank" class="px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/25 transition flex items-center gap-1.5">
+                <i class="fas fa-external-link-alt"></i>
+                <span>Open Web SSH</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const vpsId = {{ vps.id }};
+let cpuChart, ramChart, networkChart;
+let cpuData = [], ramData = [], networkRxData = [], networkTxData = [];
+let timeLabels = [];
+const maxDataPoints = 20;
+
+// Tab switching
+function showTab(tabName) {
+    document.querySelectorAll('.tab-modern').forEach(t => {
+        t.classList.remove('active');
+        t.classList.add('text-slate-400', 'hover:text-white');
+    });
+    document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+    
+    const clickedTab = document.querySelector(`.tab-modern[onclick="showTab('${tabName}')"]`);
+    if (clickedTab) {
+        clickedTab.classList.add('active');
+        clickedTab.classList.remove('text-slate-400', 'hover:text-white');
+    }
+    
+    const targetContent = document.getElementById(`tab-${tabName}`);
+    if (targetContent) {
+        targetContent.style.display = 'block';
+    }
+    
+    // Initialize charts when performance tab is shown
+    if (tabName === 'performance' && !cpuChart) {
+        setTimeout(initCharts, 100);
+    }
+}
+
+// VPS Control
+async function controlVPS(vpsId, action) {
+    if (!confirm(`Are you sure you want to ${action} this VPS?`)) {
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await fetch(`/vps/${vpsId}/control/${action}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showToast(data.error || 'Operation failed', 'danger');
+        }
+    } catch (error) {
+        showToast('Failed to control VPS: ' + error.message, 'danger');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Modal functions
+function showModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('pointer-events-none', 'opacity-0');
+        modal.classList.add('opacity-100');
+        const box = modal.querySelector('.modal-box-container');
+        if (box) {
+            box.classList.remove('scale-95');
+            box.classList.add('scale-100');
+        }
+    }
+}
+
+function hideModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('pointer-events-none', 'opacity-0');
+        modal.classList.remove('opacity-100');
+        const box = modal.querySelector('.modal-box-container');
+        if (box) {
+            box.classList.remove('scale-100');
+            box.classList.add('scale-95');
+        }
+    }
+}
+
+function showAddPortModal() {
+    showModal('addPortModal');
+}
+
+function showReinstallModal() {
+    showModal('reinstallModal');
+}
+
+function showRenameModal() {
+    showModal('renameModal');
+}
+
+// Copy to clipboard
+function copyToClipboard(elementId) {
+    const element = document.getElementById(elementId);
+    element.select();
+    element.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(element.value).then(() => {
+        showToast('Details copied to clipboard!', 'success');
+    }).catch(() => {
+        showToast('Fails to copy text', 'danger');
+    });
+}
+
+// Generate SSH Session
+async function generateSSH() {
+    showModal('sshLoadingModal');
+    
+    try {
+        const response = await fetch(`/vps/${vpsId}/ssh`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const data = await response.json();
+        hideModal('sshLoadingModal');
+        
+        if (data.success) {
+            document.getElementById('sshCommand').value = data.ssh_url || '';
+            document.getElementById('webUrl').value = data.web_url || '';
+            document.getElementById('webSshLink').href = data.web_url || '#';
+            showModal('sshModal');
+            showToast('SSH session generated successfully', 'success');
+        } else {
+            showToast(data.error || 'Failed to generate SSH session', 'danger');
+        }
+    } catch (error) {
+        hideModal('sshLoadingModal');
+        showToast('Failed to generate SSH: ' + error.message, 'danger');
+    }
+}
+
+// Add Port
+async function addPort() {
+    const vpsPort = document.getElementById('vpsPort').value;
+    const protocol = document.getElementById('portProtocol').value;
+    const description = document.getElementById('portDescription').value;
+    
+    if (!vpsPort) {
+        showToast('Please specify a VPS port number', 'warning');
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await fetch('/ports/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                vps_id: vpsId,
+                vps_port: parseInt(vpsPort),
+                protocol: protocol,
+                description: description
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Port forwarding mapped successfully', 'success');
+            hideModal('addPortModal');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast(data.error || 'Failed to map port forward', 'danger');
+        }
+    } catch (error) {
+        showToast('Failed to map port forward: ' + error.message, 'danger');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Remove Port
+async function removePort(forwardId) {
+    if (!confirm('Are you sure you want to remove this port forwarding rule?')) {
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await fetch(`/ports/remove/${forwardId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Port forwarding rule deallocated', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast(data.error || 'Failed to remove port forward', 'danger');
+        }
+    } catch (error) {
+        showToast('Failed to remove port: ' + error.message, 'danger');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Reinstall VPS
+async function reinstallVPS() {
+    const osVersion = document.getElementById('osVersion').value;
+    
+    if (!confirm('Are you sure? This will delete all data on the VPS!')) {
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await fetch(`/vps/${vpsId}/reinstall`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ os_version: osVersion })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Instance reinstallation started successfully', 'success');
+            hideModal('reinstallModal');
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            showToast(data.error || 'Failed to reinstall VPS', 'danger');
+        }
+    } catch (error) {
+        showToast('Failed to reinstall: ' + error.message, 'danger');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Rename VPS
+async function renameVPS() {
+    const newHostname = document.getElementById('newHostname').value.trim();
+    
+    if (!newHostname) {
+        showToast('Please enter a valid hostname label', 'warning');
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await fetch(`/vps/${vpsId}/rename`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ hostname: newHostname })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Instance renamed successfully', 'success');
+            hideModal('renameModal');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast(data.error || 'Failed to rename VPS', 'danger');
+        }
+    } catch (error) {
+        showToast('Failed to rename: ' + error.message, 'danger');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Password Management Functions
+let currentPassword = '';
+let passwordVisible = false;
+
+// Load current password on page load
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('tab-settings')) {
+        loadCurrentPassword();
+    }
+});
+
+// Load current VPS password
+async function loadCurrentPassword() {
+    try {
+        const response = await fetch(`/vps/${vpsId}/password`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            currentPassword = data.password || 'root';
+            document.getElementById('currentPasswordDisplay').value = '••••••••••••';
+            
+            if (data.note) {
+                showToast(data.note, 'info');
+            }
+        } else {
+            currentPassword = 'root';
+            document.getElementById('currentPasswordDisplay').value = '••••••••••••';
+            showToast(data.error || 'Failed to load password', 'warning');
+        }
+    } catch (error) {
+        console.error('Load password error:', error);
+        currentPassword = 'root';
+        document.getElementById('currentPasswordDisplay').value = '••••••••••••';
+        showToast('Using default root password credentials', 'info');
+    }
+}
+
+// Refresh password from VPS
+async function refreshPassword() {
+    showLoading();
+    try {
+        const response = await fetch(`/vps/${vpsId}/password/refresh`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP status error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            currentPassword = data.password || 'root';
+            
+            const input = document.getElementById('currentPasswordDisplay');
+            if (passwordVisible) {
+                input.value = currentPassword;
+            } else {
+                input.value = '••••••••••••';
+            }
+            
+            if (data.note) {
+                showToast(data.note, 'info');
+            } else {
+                showToast('Password synchronized successfully', 'success');
+            }
+        } else {
+            showToast(data.error || 'Failed to synchronize password', 'danger');
+        }
+    } catch (error) {
+        console.error('Refresh password error:', error);
+        showToast('Failed to sync password. Please try again.', 'danger');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Toggle password visibility
+function togglePasswordVisibility() {
+    const input = document.getElementById('currentPasswordDisplay');
+    const icon = document.getElementById('passwordToggleIcon');
+    
+    if (!currentPassword) {
+        showToast('Password details are loading...', 'warning');
+        return;
+    }
+    
+    passwordVisible = !passwordVisible;
+    
+    if (passwordVisible) {
+        input.type = 'text';
+        input.value = currentPassword;
+        icon.className = 'fas fa-eye-slash text-xs';
+    } else {
+        input.type = 'password';
+        input.value = '••••••••••••';
+        icon.className = 'fas fa-eye text-xs';
+    }
+}
+
+// Copy password to clipboard
+function copyPassword() {
+    if (!currentPassword) {
+        showToast('Password details are loading...', 'warning');
+        return;
+    }
+    
+    navigator.clipboard.writeText(currentPassword).then(() => {
+        showToast('Password copied to clipboard!', 'success');
+    }).catch(() => {
+        showToast('Fails to read clipboard allocations', 'danger');
+    });
+}
+
+// Change VPS password
+async function changeVPSPassword(event) {
+    event.preventDefault();
+    
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    if (newPassword !== confirmPassword) {
+        showToast('Passwords do not match', 'warning');
+        return;
+    }
+    
+    if (newPassword.length < 8) {
+        showToast('Password must contain at least 8 characters', 'warning');
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await fetch(`/vps/${vpsId}/password/change`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ password: newPassword })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP status error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            currentPassword = newPassword;
+            
+            const input = document.getElementById('currentPasswordDisplay');
+            if (passwordVisible) {
+                input.value = currentPassword;
+            } else {
+                input.value = '••••••••••••';
+            }
+            
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+            showToast('Instance root password updated successfully', 'success');
+        } else {
+            showToast(data.error || 'Failed to change password', 'danger');
+        }
+    } catch (error) {
+        console.error('Change password error:', error);
+        showToast('Failed to update password. Please try again.', 'danger');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Delete VPS
+async function deleteVPS() {
+    if (!confirm('Are you absolutely sure you want to delete this VPS? This operation cannot be reverted.')) {
+        return;
+    }
+    
+    if (!confirm('This will permanently wipe all data and instances. Are you 100% sure?')) {
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await fetch(`/admin/vps/${vpsId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('VPS instance deleted successfully', 'success');
+            setTimeout(() => window.location.href = '/vps', 1500);
+        } else {
+            showToast(data.error || 'Failed to delete VPS', 'danger');
+        }
+    } catch (error) {
+        showToast('Failed to delete VPS: ' + error.message, 'danger');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Suspend VPS
+async function suspendVPS() {
+    if (!confirm('Are you sure you want to suspend this VPS?')) {
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await fetch(`/admin/vps/${vpsId}/suspend`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('VPS suspended successfully', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showToast(data.error || 'Failed to suspend VPS', 'danger');
+        }
+    } catch (error) {
+        showToast('Failed to suspend VPS: ' + error.message, 'danger');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Initialize Charts
+function initCharts() {
+    const textColor = '#94a3b8';
+    const gridColor = 'rgba(255, 255, 255, 0.05)';
+    
+    const chartConfig = {
+        type: 'line',
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    labels: {
+                        color: textColor,
+                        font: { family: 'Inter', size: 10, weight: 'bold' }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: gridColor },
+                    ticks: { color: textColor, font: { family: 'JetBrains Mono', size: 9 } }
+                },
+                x: {
+                    grid: { color: gridColor },
+                    ticks: { color: textColor, font: { family: 'JetBrains Mono', size: 9 } }
+                }
+            }
+        }
+    };
+    
+    // CPU Chart
+    const cpuCtx = document.getElementById('cpuChart');
+    if (cpuCtx) {
+        cpuChart = new Chart(cpuCtx, {
+            ...chartConfig,
+            data: {
+                labels: timeLabels,
+                datasets: [{
+                    label: 'CPU Usage (%)',
+                    data: cpuData,
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99, 102, 241, 0.05)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                ...chartConfig.options,
+                scales: {
+                    ...chartConfig.options.scales,
+                    y: {
+                        ...chartConfig.options.scales.y,
+                        max: 100
+                    }
+                }
+            }
+        });
+    }
+    
+    // RAM Chart
+    const ramCtx = document.getElementById('ramChart');
+    if (ramCtx) {
+        ramChart = new Chart(ramCtx, {
+            ...chartConfig,
+            data: {
+                labels: timeLabels,
+                datasets: [{
+                    label: 'Memory Allocation (%)',
+                    data: ramData,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                ...chartConfig.options,
+                scales: {
+                    ...chartConfig.options.scales,
+                    y: {
+                        ...chartConfig.options.scales.y,
+                        max: 100
+                    }
+                }
+            }
+        });
+    }
+    
+    // Network Chart
+    const networkCtx = document.getElementById('networkChart');
+    if (networkCtx) {
+        networkChart = new Chart(networkCtx, {
+            ...chartConfig,
+            data: {
+                labels: timeLabels,
+                datasets: [
+                    {
+                        label: 'RX (Received)',
+                        data: networkRxData,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                        tension: 0.4,
+                        fill: true,
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'TX (Transmitted)',
+                        data: networkTxData,
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.05)',
+                        tension: 0.4,
+                        fill: true,
+                        borderWidth: 2
+                    }
+                ]
+            }
+        });
+    }
+    
+    // Start updating charts
+    updateCharts();
+}
+
+// Update Charts
+async function updateCharts() {
+    try {
+        const response = await fetch(`/vps/${vpsId}/stats`);
+        const data = await response.json();
+        
+        if (data.success && data.stats.status === 'running') {
+            const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            timeLabels.push(now);
+            cpuData.push(data.stats.cpu || 0);
+            ramData.push(data.stats.ram?.pct || 0);
+            
+            const rxMatch = (data.stats.network?.rx || '0').match(/[\d.]+/);
+            const txMatch = (data.stats.network?.tx || '0').match(/[\d.]+/);
+            networkRxData.push(rxMatch ? parseFloat(rxMatch[0]) : 0);
+            networkTxData.push(txMatch ? parseFloat(txMatch[0]) : 0);
+            
+            if (timeLabels.length > maxDataPoints) {
+                timeLabels.shift();
+                cpuData.shift();
+                ramData.shift();
+                networkRxData.shift();
+                networkTxData.shift();
+            }
+            
+            if (cpuChart) cpuChart.update();
+            if (ramChart) ramChart.update();
+            if (networkChart) networkChart.update();
+            
+            updateResourceCards(data.stats);
+        }
+    } catch (error) {
+        console.error('Failed to update charts:', error);
+    }
+    
+    setTimeout(updateCharts, 5000);
+}
+
+// Update Resource Cards
+function updateResourceCards(stats) {
+    const cpuElements = document.querySelectorAll('.vps-cpu[data-id="' + vpsId + '"]');
+    cpuElements.forEach(el => {
+        el.textContent = (stats.cpu || 0).toFixed(1) + '%';
+    });
+    
+    const cpuProgress = document.querySelector('.cpu-progress');
+    if (cpuProgress) {
+        cpuProgress.style.width = (stats.cpu || 0) + '%';
+    }
+    
+    const ramPctElements = document.querySelectorAll('.vps-ram-pct[data-id="' + vpsId + '"]');
+    ramPctElements.forEach(el => {
+        el.textContent = (stats.ram?.pct || 0).toFixed(1) + '%';
+    });
+    
+    const ramUsedElements = document.querySelectorAll('.vps-ram-used[data-id="' + vpsId + '"]');
+    ramUsedElements.forEach(el => {
+        el.textContent = Math.round(stats.ram?.used || 0) + 'MB / ' + (stats.ram?.total || 0) + 'MB';
+    });
+    
+    const ramProgress = document.querySelector('.ram-progress');
+    if (ramProgress) {
+        ramProgress.style.width = (stats.ram?.pct || 0) + '%';
+    }
+    
+    const diskElements = document.querySelectorAll('.vps-disk[data-id="' + vpsId + '"]');
+    diskElements.forEach(el => {
+        el.textContent = stats.disk?.use_percent || 'N/A';
+    });
+    
+    const diskProgress = document.querySelector('.disk-progress');
+    if (diskProgress && stats.disk?.use_percent) {
+        const diskPct = parseFloat(stats.disk.use_percent.replace('%', ''));
+        diskProgress.style.width = diskPct + '%';
+    }
+}
+
+// Refresh Charts
+function refreshCharts() {
+    cpuData = [];
+    ramData = [];
+    networkRxData = [];
+    networkTxData = [];
+    timeLabels = [];
+    
+    if (cpuChart) cpuChart.update();
+    if (ramChart) ramChart.update();
+    if (networkChart) networkChart.update();
+    
+    showToast('Telemetry charts refreshed', 'success');
+}
+
+// Escape key and window clicks to close modals
+window.onclick = function(event) {
+    if (event.target.classList.contains('fixed') && event.target.id) {
+        hideModal(event.target.id);
+    }
+}
+
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        document.querySelectorAll('.fixed').forEach(modal => {
+            if (modal.id) hideModal(modal.id);
+        });
+    }
+});
+
+// Auto-update stats every 10 seconds
+{% if stats.status == 'running' %}
+setInterval(async () => {
+    try {
+        const response = await fetch(`/vps/${vpsId}/stats`);
+        const data = await response.json();
+        
+        if (data.success && data.stats.status === 'running') {
+            updateResourceCards(data.stats);
+        }
+    } catch (error) {
+        console.error('Failed to update stats:', error);
+    }
+}, 10000);
+{% endif %}
+</script>
+{% endblock %}

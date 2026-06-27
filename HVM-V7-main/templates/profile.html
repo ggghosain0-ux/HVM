@@ -1,0 +1,383 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - {{ panel_name }}{% endblock %}
+
+{% block header_title %}My Profile{% endblock %}
+
+{% block breadcrumbs %}
+<div class="flex items-center gap-2 mb-6 text-xs text-slate-500 font-display">
+    <a href="{{ url_for('dashboard') }}" class="hover:text-indigo-400 transition">Dashboard</a>
+    <span><i class="fas fa-chevron-right text-[10px]"></i></span>
+    <span class="text-slate-300 font-medium">Profile</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="profile-container space-y-6">
+    
+    <!-- Profile Hero Card with avatar overlay and general metadata -->
+    <div class="relative overflow-hidden rounded-2xl glass-panel p-6 md:p-8 flex flex-col md:flex-row gap-6 items-center">
+        <!-- Subtle background glowing accents -->
+        <div class="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-indigo-500/10 blur-3xl"></div>
+        <div class="absolute -left-16 -bottom-16 w-64 h-64 rounded-full bg-purple-500/10 blur-3xl"></div>
+
+        <!-- Avatar picture selector -->
+        <div class="relative group shrink-0">
+            <div class="w-28 h-28 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/15 border border-white/10 flex items-center justify-center overflow-hidden ring-4 ring-indigo-500/20 shadow-xl">
+                {% if current_user.profile_picture %}
+                <img src="{{ current_user.profile_picture }}" alt="{{ current_user.username }}" class="w-full h-full object-cover">
+                {% else %}
+                <span class="font-display font-bold text-4xl text-indigo-400">{{ current_user.username[:1].upper() }}</span>
+                {% endif %}
+            </div>
+            
+            <button onclick="document.getElementById('profilePicInput').click()" class="absolute -bottom-2 -right-2 w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-white/10 hover:border-indigo-500/30 flex items-center justify-center cursor-pointer shadow-lg transition-all hover:scale-110" title="Upload new profile picture">
+                <i class="fas fa-camera text-xs"></i>
+            </button>
+            <input type="file" id="profilePicInput" accept="image/*" class="hidden" onchange="uploadProfilePicture(this)">
+        </div>
+
+        <!-- Name and Role display -->
+        <div class="text-center md:text-left flex-1 space-y-3">
+            <div>
+                <h1 class="font-display font-bold text-2xl md:text-3xl text-white tracking-tight">{{ current_user.username }}</h1>
+                <p class="text-sm text-slate-400 mt-1 font-mono">{{ current_user.email }}</p>
+            </div>
+            
+            <div class="flex flex-wrap justify-center md:justify-start gap-2 text-[10px] font-bold">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 uppercase tracking-wide">
+                    {% if current_user.is_main_admin %}
+                    <i class="fas fa-crown text-[9px]"></i> Owner Admin
+                    {% elif current_user.is_admin %}
+                    <i class="fas fa-shield-alt text-[9px]"></i> Administrator
+                    {% else %}
+                    <i class="fas fa-user text-[9px]"></i> Authorized Client
+                    {% endif %}
+                </span>
+                
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 text-slate-400 border border-white/5 font-medium">
+                    <i class="fas fa-calendar text-[9px]"></i> Joined {{ current_user.created_at|relative_time }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Details forms & information section layout -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <!-- Account Info & Third party login binds -->
+        <div class="lg:col-span-5 space-y-6">
+            <div class="glass-panel rounded-2xl p-5 md:p-6 space-y-5">
+                <div class="flex items-center gap-3 pb-4 border-b border-white/5">
+                    <div class="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                        <i class="fas fa-info-circle text-sm"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-display font-bold text-sm text-white">Metadata Details</h3>
+                        <p class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Account diagnostics</p>
+                    </div>
+                </div>
+
+                <!-- Last Active row -->
+                <div class="flex items-center justify-between text-xs py-1 border-b border-white/[0.04] last:border-0 pb-3">
+                    <div class="flex items-center gap-2.5 text-slate-400">
+                        <i class="fas fa-clock text-slate-500"></i>
+                        <span>Last Login Date</span>
+                    </div>
+                    <span class="font-medium text-slate-200 font-mono text-[11px]">{{ current_user.last_login|relative_time if current_user.last_login else 'Never recorded' }}</span>
+                </div>
+
+                <!-- Last active action row -->
+                <div class="flex items-center justify-between text-xs py-1 border-b border-white/[0.04] last:border-0 pb-3">
+                    <div class="flex items-center gap-2.5 text-slate-400">
+                        <i class="fas fa-wave-square text-slate-500"></i>
+                        <span>Recent Interaction</span>
+                    </div>
+                    <span class="font-medium text-slate-200 font-mono text-[11px]">{{ current_user.last_active|relative_time if current_user.last_active else 'Never recorded' }}</span>
+                </div>
+
+                <!-- API Access key display -->
+                <div class="flex flex-col gap-2 pt-1 border-b border-white/[0.04] pb-3">
+                    <div class="flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2.5 text-slate-400">
+                            <i class="fas fa-key text-slate-500"></i>
+                            <span>Access API Token</span>
+                        </div>
+                        <div class="flex gap-1.5">
+                            <button onclick="copyAPIKey()" class="w-6 h-6 rounded bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center border border-white/5 cursor-pointer" title="Copy Token">
+                                <i class="fas fa-copy text-[10px]"></i>
+                            </button>
+                            <button onclick="regenerateAPIKey()" class="w-6 h-6 rounded bg-slate-900 hover:bg-slate-800 text-indigo-400 hover:text-indigo-300 flex items-center justify-center border border-white/5 cursor-pointer" title="Regenerate Token">
+                                <i class="fas fa-sync text-[10px]"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="px-3 py-1.5 rounded-lg bg-slate-950/50 border border-white/5 font-mono text-[10px] text-indigo-400 truncate tracking-tight">
+                        {{ current_user.api_key or 'No token allocated' }}
+                    </div>
+                </div>
+
+                <!-- Discord link row -->
+                {% if get_setting('discord_auth_enabled', '0') == '1' %}
+                <div class="flex items-center justify-between text-xs pt-1">
+                    <div class="flex items-center gap-2.5 text-slate-400">
+                        <i class="fab fa-discord text-[#5865F2]"></i>
+                        <span>Discord Account</span>
+                    </div>
+                    <div>
+                        {% if current_user.discord_id %}
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-slate-200 text-[11px]">{{ current_user.discord_username }}</span>
+                            <form method="POST" action="{{ url_for('discord_unlink') }}" class="inline">
+                                <button type="submit" onclick="return confirm('Disconnect Discord identity link?')" class="w-6 h-6 rounded bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 flex items-center justify-center cursor-pointer transition">
+                                    <i class="fas fa-unlink text-[10px]"></i>
+                                </button>
+                            </form>
+                        </div>
+                        {% else %}
+                        <a href="{{ url_for('discord_link') }}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold text-[10px] transition shadow-md shadow-indigo-600/10">
+                            <i class="fab fa-discord"></i>
+                            <span>Link Identity</span>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Save preference settings form block -->
+        <div class="lg:col-span-7">
+            <div class="glass-panel rounded-2xl p-5 md:p-6">
+                <div class="flex items-center gap-3 pb-4 border-b border-white/5 mb-5">
+                    <div class="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                        <i class="fas fa-user-cog text-sm"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-display font-bold text-sm text-white">Modify Profile Preferences</h3>
+                        <p class="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Keep details updated</p>
+                    </div>
+                </div>
+
+                <form method="POST" action="{{ url_for('profile') }}" class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-display">Username Profile</label>
+                            <input type="text" name="username" value="{{ current_user.username }}" required class="w-full px-3 py-2 rounded-xl border border-white/5 bg-slate-900/60 text-slate-200 text-xs focus:outline-none focus:border-indigo-500/50 transition">
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-display">Registered Email</label>
+                            <input type="email" name="email" value="{{ current_user.email }}" required class="w-full px-3 py-2 rounded-xl border border-white/5 bg-slate-900/60 text-slate-200 text-xs focus:outline-none focus:border-indigo-500/50 transition">
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-display">Current password</label>
+                            <input type="password" name="current_password" placeholder="Verify security check" class="w-full px-3 py-2 rounded-xl border border-white/5 bg-slate-900/60 text-slate-200 text-xs focus:outline-none focus:border-indigo-500/50 transition">
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-display">New password</label>
+                            <input type="password" name="new_password" placeholder="Or leave untouched" class="w-full px-3 py-2 rounded-xl border border-white/5 bg-slate-900/60 text-slate-200 text-xs focus:outline-none focus:border-indigo-500/50 transition">
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-display">Confirm new password</label>
+                            <input type="password" name="confirm_password" placeholder="Re-enter password" class="w-full px-3 py-2 rounded-xl border border-white/5 bg-slate-900/60 text-slate-200 text-xs focus:outline-none focus:border-indigo-500/50 transition">
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-display">Theme settings</label>
+                            <select name="theme" class="w-full px-3 py-2 rounded-xl border border-white/5 bg-slate-900/60 text-slate-300 text-xs focus:outline-none focus:border-indigo-500/50 transition">
+                                <option value="default" {% if current_user.theme == 'default' %}selected{% endif %}>Dynamic System</option>
+                                <option value="dark" {% if current_user.theme == 'dark' %}selected{% endif %}>Universe Dark</option>
+                                <option value="light" {% if current_user.theme == 'light' %}selected{% endif %}>Classic Light</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap justify-between items-center gap-3 pt-4 border-t border-white/5">
+                        <button type="button" onclick="deleteProfilePicture()" class="px-4 py-2 text-xs font-bold rounded-xl border border-rose-500/20 text-rose-400 hover:bg-rose-500/5 transition cursor-pointer">
+                            <i class="fas fa-trash mr-1.5"></i> Remove Avatar
+                        </button>
+                        
+                        <button type="submit" class="px-5 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/25 transition cursor-pointer">
+                            <i class="fas fa-save mr-1.5"></i> Save Profile Details
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auditing log events timeline table -->
+    <div class="glass-panel rounded-2xl overflow-hidden border border-white/5">
+        <div class="px-5 py-4 border-b border-white/5 flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                <i class="fas fa-history text-sm"></i>
+            </div>
+            <h3 class="font-display font-bold text-sm text-white">Security Auditing Log</h3>
+        </div>
+
+        {% if activities %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-white/5 bg-white/[0.01]">
+                        <th class="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider font-display">Logged Event</th>
+                        <th class="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider font-display">Target Reference</th>
+                        <th class="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider font-display">Audit Details</th>
+                        <th class="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider font-display">Host IP Address</th>
+                        <th class="px-5 py-3 text-right text-[10px] font-bold text-slate-500 uppercase tracking-wider font-display">Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-white/[0.04]">
+                    {% for activity in activities[:10] %}
+                    <tr class="hover:bg-white/[0.01] transition-colors text-xs text-slate-300">
+                        <td class="px-5 py-3.5 font-bold">
+                            <span class="inline-flex px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] font-semibold uppercase tracking-wider">
+                                {{ activity.action }}
+                            </span>
+                        </td>
+                        <td class="px-5 py-3.5 font-medium">
+                            {{ activity.resource_type or 'General' }} {{ activity.resource_id or '' }}
+                        </td>
+                        <td class="px-5 py-3.5 text-slate-400 font-medium">
+                            {{ activity.details|truncate(64) }}
+                        </td>
+                        <td class="px-5 py-3.5 font-mono text-[11px] text-slate-400">
+                            {{ activity.ip_address or '0.0.0.0' }}
+                        </td>
+                        <td class="px-5 py-3.5 text-right font-medium text-slate-500 text-[11px]">
+                            {{ activity.created_at|relative_time }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="py-12 text-center flex flex-col items-center">
+            <div class="w-12 h-12 rounded-xl bg-slate-900 text-slate-500 flex items-center justify-center mb-3 border border-white/5">
+                <i class="fas fa-history"></i>
+            </div>
+            <h4 class="font-display font-semibold text-slate-400 text-sm">No activity recorded</h4>
+            <p class="text-xs text-slate-600 mt-1">There are no diagnostic auditing records logged on this account yet.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Upload profile picture
+    function uploadProfilePicture(input) {
+        if (!input.files || !input.files[0]) return;
+
+        const file = input.files[0];
+        
+        if (file.size > 5 * 1024 * 1024) {
+            showToast('Target picture must remain under 5MB in size', 'warning');
+            return;
+        }
+        
+        if (!file.type.startsWith('image/')) {
+            showToast('Fails to recognize asset as a valid image file', 'warning');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('picture', file);
+
+        showLoading();
+
+        fetch('/profile/picture', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Successfully updated profile picture', 'success');
+                setTimeout(() => window.location.reload(), 1200);
+            } else {
+                showToast(data.error || 'Failed to update profile image', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Profile image upload failed:', error);
+            showToast('Connection interrupted during upload', 'danger');
+        })
+        .finally(() => {
+            hideLoading();
+        });
+    }
+
+    // Delete profile picture
+    function deleteProfilePicture() {
+        if (!confirm('Are you sure you want to revert profile picture allocation?')) {
+            return;
+        }
+
+        showLoading();
+
+        fetch('/profile/picture/delete', {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Successfully deleted profile picture allocation', 'success');
+                setTimeout(() => window.location.reload(), 1200);
+            } else {
+                showToast(data.error || 'Failed to delete profile picture allocation', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Profile picture deletion failed:', error);
+            showToast('Connection interrupted during request', 'danger');
+        })
+        .finally(() => {
+            hideLoading();
+        });
+    }
+
+    // Copy API key
+    function copyAPIKey() {
+        navigator.clipboard.writeText('{{ current_user.api_key }}').then(() => {
+            showToast('Access API token copied to secure clipboard', 'success');
+        }).catch(() => {
+            showToast('Fails to read clipboard allocations', 'danger');
+        });
+    }
+
+    // Regenerate API key
+    function regenerateAPIKey() {
+        if (!confirm('Are you sure you want to regenerate your secure API token? Your existing third party integrations will break immediately.')) {
+            return;
+        }
+
+        showLoading();
+
+        fetch('/profile/api-key/regenerate', {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Successfully rotated secure API token', 'success');
+                setTimeout(() => window.location.reload(), 1200);
+            } else {
+                showToast(data.error || 'Failed to rotate secure API token', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('API token rotation failed:', error);
+            showToast('Connection interrupted during rotation', 'danger');
+        })
+        .finally(() => {
+            hideLoading();
+        });
+    }
+</script>
+{% endblock %}

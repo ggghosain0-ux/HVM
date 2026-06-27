@@ -1,0 +1,59 @@
+{% if (notifs if notifs is defined) or (success_notifs if success_notifs is defined) or (warning_notifs if warning_notifs is defined) or (danger_notifs if danger_notifs is defined) %}
+{% set display_notifs = notifs if notifs is defined else (success_notifs if success_notifs is defined else (warning_notifs if warning_notifs is defined else danger_notifs)) %}
+<div class="space-y-2.5 bg-transparent">
+    {% for notif in display_notifs %}
+    <div class="p-3.5 bg-slate-950/60 hover:bg-slate-950/90 border border-white/5 hover:border-white/10 rounded-xl transition duration-200 flex gap-3 relative overflow-hidden group" data-notification-id="{{ notif.id }}">
+        
+        <!-- Action badge on left side -->
+        {% set item_color = 'text-indigo-400' %}
+        {% set item_bg = 'bg-indigo-500/10' %}
+        {% set item_glyph = 'fa-info-circle' %}
+        
+        {% if notif.type == 'success' %}
+            {% set item_color = 'text-emerald-400' %}
+            {% set item_bg = 'bg-emerald-500/10' %}
+            {% set item_glyph = 'fa-check-circle' %}
+        {% elif notif.type == 'warning' %}
+            {% set item_color = 'text-amber-400' %}
+            {% set item_bg = 'bg-amber-500/10' %}
+            {% set item_glyph = 'fa-exclamation-triangle' %}
+        {% elif notif.type == 'danger' %}
+            {% set item_color = 'text-rose-400' %}
+            {% set item_bg = 'bg-rose-500/10' %}
+            {% set item_glyph = 'fa-exclamation-circle' %}
+        {% endif %}
+
+        <div class="shrink-0">
+            <div class="w-8 h-8 rounded-lg {{ item_bg }} {{ item_color }} flex items-center justify-center">
+                <i class="fas {{ item_glyph }} text-xs"></i>
+            </div>
+        </div>
+        
+        <div class="flex-1 min-w-0 space-y-0.5 pr-12">
+            <h5 class="text-[11px] font-bold text-slate-200 group-hover:text-white transition leading-tight {% if not notif.read %}text-white font-extrabold{% endif %}">{{ notif.title }}</h5>
+            <p class="text-[11px] text-slate-400 leading-normal line-clamp-2">{{ notif.message }}</p>
+            <div class="text-[9px] text-slate-500 font-medium font-mono pt-1">
+                {{ notif.created_at|relative_time }}
+            </div>
+        </div>
+        
+        <!-- Group hover actions list on the far right edge -->
+        <div class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition duration-200">
+            {% if not notif.read %}
+            <button class="w-6 h-6 rounded bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center cursor-pointer transition" onclick="markRead({{ notif.id }})" title="Mark read">
+                <i class="fas fa-check text-[9px]"></i>
+            </button>
+            {% endif %}
+            <button class="w-6 h-6 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 flex items-center justify-center cursor-pointer transition border border-rose-500/10" onclick="deleteNotification({{ notif.id }})" title="Delete alert">
+                <i class="fas fa-trash text-[9px]"></i>
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="flex flex-col items-center justify-center py-10 text-center text-slate-500">
+    <i class="fas fa-bell-slash text-xl mb-2 text-slate-700 animate-pulse"></i>
+    <p class="text-[11px] font-semibold text-slate-400">Zero category notifications</p>
+</div>
+{% endif %}

@@ -1,0 +1,340 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - {{ panel_name }}{% endblock %}
+
+{% block header_title %}Administration{% endblock %}
+
+{% block breadcrumbs %}
+<div class="flex items-center gap-2 text-xs font-semibold text-slate-400 font-display">
+    <a href="{{ url_for('dashboard') }}" class="hover:text-white transition">Dashboard</a>
+    <i class="fas fa-chevron-right text-[10px] text-slate-600"></i>
+    <span class="text-indigo-400 font-bold">Admin Panel</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6 animate-[fadeIn_0.4s_ease-out]">
+    
+    <!-- Quick Stats Bento Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Total Users card -->
+        <div class="bg-slate-900/40 border border-white/5 rounded-2xl p-5 shadow-xl relative overflow-hidden backdrop-blur-md flex items-center gap-4 group hover:border-indigo-500/20 transition duration-300">
+            <div class="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center group-hover:scale-110 transition duration-300 shrink-0">
+                <i class="fas fa-users text-lg"></i>
+            </div>
+            <div class="min-w-0">
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-display">Total Users</p>
+                <h4 class="text-xl font-bold text-white font-mono mt-0.5 leading-none">{{ total_users }}</h4>
+            </div>
+        </div>
+
+        <!-- Total VPS card -->
+        <div class="bg-slate-900/40 border border-white/5 rounded-2xl p-5 shadow-xl relative overflow-hidden backdrop-blur-md flex items-center gap-4 group hover:border-emerald-500/20 transition duration-300">
+            <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition duration-300 shrink-0">
+                <i class="fas fa-server text-lg"></i>
+            </div>
+            <div class="min-w-0">
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-display">Total VPS</p>
+                <h4 class="text-xl font-bold text-white font-mono mt-0.5 leading-none">{{ total_vps }}</h4>
+                <p class="text-[10px] text-emerald-400 font-bold font-display mt-1">{{ running_vps }} running</p>
+            </div>
+        </div>
+
+        <!-- Suspended VPS card -->
+        <div class="bg-slate-900/40 border border-white/5 rounded-2xl p-5 shadow-xl relative overflow-hidden backdrop-blur-md flex items-center gap-4 group hover:border-amber-500/20 transition duration-300">
+            <div class="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center group-hover:scale-110 transition duration-300 shrink-0">
+                <i class="fas fa-ban text-lg"></i>
+            </div>
+            <div class="min-w-0">
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-display">Suspended VPS</p>
+                <h4 class="text-xl font-bold text-white font-mono mt-0.5 leading-none">{{ suspended_vps }}</h4>
+            </div>
+        </div>
+
+        <!-- Port Usage card -->
+        <div class="bg-slate-900/40 border border-white/5 rounded-2xl p-5 shadow-xl relative overflow-hidden backdrop-blur-md flex items-center gap-4 group hover:border-rose-500/20 transition duration-300">
+            <div class="w-12 h-12 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center group-hover:scale-110 transition duration-300 shrink-0">
+                <i class="fas fa-plug text-lg"></i>
+            </div>
+            <div class="min-w-0">
+                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-display">Port Allocation</p>
+                <h4 class="text-xl font-bold text-white font-mono mt-0.5 leading-none">{{ used_ports }}/{{ total_ports }}</h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cluster / Actions Matrix -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Host System Health -->
+        <div class="bg-slate-900/40 border border-white/5 rounded-2xl p-6 shadow-2xl relative overflow-hidden backdrop-blur-md space-y-6">
+            <h3 class="text-sm font-bold font-display text-white flex items-center gap-2">
+                <i class="fas fa-heartbeat text-indigo-400"></i>
+                <span>Local Supervisor Metrics</span>
+            </h3>
+
+            <!-- Stats metric progress bars -->
+            <div class="space-y-4">
+                <!-- CPU -->
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-slate-300 font-semibold font-display">CPU Usage</span>
+                        <span class="text-slate-400 font-bold font-mono">{{ host_stats.cpu|round(1) }}%</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-slate-950 border border-white/5 rounded-full overflow-hidden">
+                        {% set cpu_color = 'bg-indigo-500' %}
+                        {% if host_stats.cpu > 80 %}{% set cpu_color = 'bg-rose-500' %}
+                        {% elif host_stats.cpu > 60 %}{% set cpu_color = 'bg-amber-500' %}{% endif %}
+                        <div class="h-full {{ cpu_color }} rounded-full" style="width: {{ host_stats.cpu }}%;"></div>
+                    </div>
+                </div>
+
+                <!-- RAM -->
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-slate-300 font-semibold font-display">Memory Usage</span>
+                        <span class="text-slate-400 font-bold font-mono">{{ host_stats.ram.percent|round(1) }}% <span class="text-[10px] text-slate-500">({{ host_stats.ram.used }}M / {{ host_stats.ram.total }}M)</span></span>
+                    </div>
+                    <div class="w-full h-1.5 bg-slate-950 border border-white/5 rounded-full overflow-hidden">
+                        {% set ram_color = 'bg-indigo-500' %}
+                        {% if host_stats.ram.percent > 80 %}{% set ram_color = 'bg-rose-500' %}
+                        {% elif host_stats.ram.percent > 60 %}{% set ram_color = 'bg-amber-500' %}{% endif %}
+                        <div class="h-full {{ ram_color }} rounded-full" style="width: {{ host_stats.ram.percent }}%;"></div>
+                    </div>
+                </div>
+
+                <!-- Disk -->
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-slate-300 font-semibold font-display">Local Storage</span>
+                        <span class="text-slate-400 font-bold font-mono">{{ host_stats.disk.percent }}</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-slate-950 border border-white/5 rounded-full overflow-hidden">
+                        {% set disk_percent = host_stats.disk.percent|replace('%','')|int %}
+                        {% set disk_color = 'bg-indigo-500' %}
+                        {% if disk_percent > 80 %}{% set disk_color = 'bg-rose-500' %}
+                        {% elif disk_percent > 60 %}{% set disk_color = 'bg-amber-500' %}{% endif %}
+                        <div class="h-full {{ disk_color }} rounded-full" style="width: {{ disk_percent }}%;"></div>
+                    </div>
+                    <p class="text-[10px] text-slate-500 font-semibold font-mono">{{ host_stats.disk.used }} allocated / {{ host_stats.disk.total }} total (Free: {{ host_stats.disk.free }})</p>
+                </div>
+            </div>
+
+            <div class="pt-5 border-t border-white/5 flex flex-wrap items-center gap-4 text-[11px] text-slate-400 font-semibold font-display">
+                <div class="flex items-center gap-1.5">
+                    <span class="text-slate-500">Uptime:</span>
+                    <span class="px-2 py-0.5 rounded bg-slate-950 border border-white/5 text-[10px] font-mono text-indigo-400">{{ host_stats.uptime }}</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <span class="text-slate-500">Cluster Nodes:</span>
+                    <span class="px-2 py-0.5 rounded bg-slate-950 border border-white/5 text-[10px] font-mono text-emerald-400">{{ online_nodes }}/{{ total_nodes }} Online</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Administration Actions -->
+        <div class="bg-slate-900/40 border border-white/5 rounded-2xl p-6 shadow-2xl relative overflow-hidden backdrop-blur-md space-y-6">
+            <h3 class="text-sm font-bold font-display text-white flex items-center gap-2">
+                <i class="fas fa-bolt text-indigo-400"></i>
+                <span>Administrative Actions</span>
+            </h3>
+
+            <div class="grid grid-cols-2 gap-3">
+                <a href="{{ url_for('admin_vps_create') }}" class="px-4 py-3 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/15 transition flex items-center justify-center gap-2 cursor-pointer">
+                    <i class="fas fa-plus text-[11px]"></i>
+                    <span>Create VPS</span>
+                </a>
+                <a href="{{ url_for('admin_users') }}" class="px-4 py-3 text-xs font-bold rounded-xl border border-white/5 hover:border-white/10 text-slate-300 hover:text-white transition bg-slate-800/20 hover:bg-slate-800/40 flex items-center justify-center gap-2">
+                    <i class="fas fa-users text-[11px]"></i>
+                    <span>Manage Users</span>
+                </a>
+                <a href="{{ url_for('admin_nodes') }}" class="px-4 py-3 text-xs font-bold rounded-xl border border-white/5 hover:border-white/10 text-slate-300 hover:text-white transition bg-slate-800/20 hover:bg-slate-800/40 flex items-center justify-center gap-2">
+                    <i class="fas fa-network-wired text-[11px]"></i>
+                    <span>Manage Nodes</span>
+                </a>
+                <a href="{{ url_for('admin_settings') }}" class="px-4 py-3 text-xs font-bold rounded-xl border border-white/5 hover:border-white/10 text-slate-300 hover:text-white transition bg-slate-800/20 hover:bg-slate-800/40 flex items-center justify-center gap-2">
+                    <i class="fas fa-cog text-[11px]"></i>
+                    <span>Settings</span>
+                </a>
+                <button class="px-4 py-3 text-xs font-bold rounded-xl border border-white/5 hover:border-white/10 text-amber-400 hover:text-amber-300 transition bg-slate-800/20 hover:bg-slate-800/40 flex items-center justify-center gap-2 cursor-pointer" onclick="runResourceCheck()">
+                    <i class="fas fa-search text-[11px]"></i>
+                    <span>Resource Audit</span>
+                </button>
+                <button class="px-4 py-3 text-xs font-bold rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/15 hover:border-rose-500/30 transition flex items-center justify-center gap-2 cursor-pointer" onclick="emergencyStopAll()">
+                    <i class="fas fa-stop-circle text-[11px]"></i>
+                    <span>Emergency Stop</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cluster Nodes Status Panel -->
+    <div class="bg-slate-900/40 border border-white/5 rounded-2xl p-6 shadow-2xl relative overflow-hidden backdrop-blur-md space-y-4">
+        <div class="flex items-center justify-between gap-4">
+            <h3 class="text-sm font-bold font-display text-white flex items-center gap-2">
+                <i class="fas fa-network-wired text-indigo-400"></i>
+                <span>Active Cluster Nodes</span>
+            </h3>
+            <button class="w-8 h-8 rounded-lg border border-white/5 hover:border-white/10 bg-slate-950 hover:bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center transition cursor-pointer" onclick="refreshNodes()" title="Sync Cluster Nodes">
+                <i class="fas fa-sync-alt text-xs"></i>
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {% for node in node_status %}
+            <div class="bg-slate-950/60 border border-white/5 rounded-2xl p-4 space-y-3.5 relative overflow-hidden">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl {% if node.online %}bg-emerald-500/10 text-emerald-400 border border-emerald-500/20{% else %}bg-rose-500/10 text-rose-400 border border-rose-500/20{% endif %} flex items-center justify-center">
+                            <i class="fas fa-{% if node.online %}check-circle{% else %}exclamation-circle{% endif %} text-sm"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <h4 class="text-xs font-bold text-slate-200 leading-tight truncate">{{ node.name }}</h4>
+                            <p class="text-[9px] text-slate-500 font-semibold font-display tracking-wider uppercase mt-0.5">{{ node.location }}</p>
+                        </div>
+                    </div>
+                    <span class="px-1.5 py-0.5 rounded bg-slate-900 border border-white/5 text-[8px] font-mono font-bold uppercase {% if node.online %}text-emerald-400{% else %}text-rose-400{% endif %}">{{ node.status }}</span>
+                </div>
+
+                <div class="flex items-center gap-2 text-[10px] font-semibold text-slate-400 font-display">
+                    <span class="px-2 py-0.5 bg-indigo-500/10 border border-indigo-500/15 rounded text-indigo-400 font-mono text-[9px]">{{ node.vps_count }}/{{ node.total_vps }} Guest instances</span>
+                    {% if node.online and node.stats %}
+                    <span class="px-2 py-0.5 bg-slate-900 border border-white/5 rounded text-slate-300 font-mono text-[9px]">CPU: {{ node.stats.cpu|round(1) }}%</span>
+                    {% endif %}
+                </div>
+
+                {% if node.online and node.stats %}
+                <div class="pt-2.5 border-t border-white/5 grid grid-cols-2 gap-3 text-[10px] text-slate-500 font-semibold font-mono">
+                    <div class="flex items-center gap-1"><span>RAM:</span> <span class="text-slate-300">{{ node.stats.ram.percent|round(1) }}%</span></div>
+                    <div class="flex items-center gap-1"><span>Disk:</span> <span class="text-slate-300">{{ node.stats.disk.percent }}</span></div>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Cluster Wide Audits & Activity Log -->
+    <div class="bg-slate-900/40 border border-white/5 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-md space-y-4 py-5">
+        <h3 class="text-sm font-bold font-display text-white px-6 flex items-center gap-2">
+            <i class="fas fa-history text-indigo-400"></i>
+            <span>Orchestrator Activity Logs</span>
+        </h3>
+
+        {% if recent_activity %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="border-b border-white/5 text-slate-400 font-bold font-display uppercase tracking-wider text-[10px]">
+                        <th class="px-6 py-3.5">User Handle</th>
+                        <th class="px-6 py-3.5">System Action</th>
+                        <th class="px-6 py-3.5">Assigned Target</th>
+                        <th class="px-6 py-3.5">Audits / Logs</th>
+                        <th class="px-6 py-3.5">Origination IP</th>
+                        <th class="px-6 py-3.5">Relative Time</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-white/[0.03] text-slate-300 font-medium">
+                    {% for activity in recent_activity %}
+                    <tr class="hover:bg-white/[0.01] transition duration-150">
+                        <!-- User avatar handle -->
+                        <td class="px-6 py-3">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-6 h-6 rounded-lg bg-indigo-600/20 text-indigo-400 border border-indigo-500/10 flex items-center justify-center text-[10px] font-bold font-mono">
+                                    {{ activity.username[:1].upper() if activity.username else '?' }}
+                                </div>
+                                <span class="text-slate-200 font-semibold truncate max-w-[120px]">{{ activity.username or 'System Operator' }}</span>
+                            </div>
+                        </td>
+                        <!-- Action category -->
+                        <td class="px-6 py-3">
+                            <span class="px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-[9px] font-bold text-indigo-400 uppercase tracking-wider font-mono">{{ activity.action }}</span>
+                        </td>
+                        <!-- Assigned Target -->
+                        <td class="px-6 py-3 text-[11px] text-slate-400 font-mono">
+                            {% if activity.resource_type %}
+                            {{ activity.resource_type }} #{{ activity.resource_id }}
+                            {% else %}
+                            <span class="text-slate-600">-</span>
+                            {% endif %}
+                        </td>
+                        <!-- Audits -->
+                        <td class="px-6 py-3 text-slate-400 truncate max-w-xs" title="{{ activity.details }}">{{ activity.details|truncate(50) }}</td>
+                        <!-- IP -->
+                        <td class="px-6 py-3 text-[11px] text-slate-500 font-mono">{{ activity.ip_address or '-' }}</td>
+                        <!-- Time -->
+                        <td class="px-6 py-3 text-[11px] text-slate-500 font-mono">{{ activity.created_at|relative_time }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="flex flex-col items-center justify-center py-12 text-center text-slate-500">
+            <i class="fas fa-history text-xl mb-2 text-slate-700 animate-pulse"></i>
+            <p class="text-[11px] font-semibold text-slate-400">Zero active system audits logged</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Audit active workloads on guests
+    async function runResourceCheck() {
+        if (!confirm('Run resource limits inspection on all guests? Over-allocated nodes may undergo automated suspension cycles.')) {
+            return;
+        }
+
+        showLoading();
+
+        try {
+            const response = await fetch('/admin/resource-check', { method: 'POST' });
+            const result = await response.json();
+
+            if (result.success) {
+                showToast(`Resource check completed successfully. ${result.suspended} workloads throttled / suspended.`, 'success');
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showToast(result.error || 'Resource scanning cycle failed', 'danger');
+            }
+        } catch (error) {
+            console.error('Resource sweep failed:', error);
+            showToast('Network gateway transaction failed', 'danger');
+        } finally {
+            hideLoading();
+        }
+    }
+
+    // Terminate all guest hypervisors in emergency state
+    async function emergencyStopAll() {
+        if (!confirm('CRITICAL WARNING: This transaction will instantly initiate a hard-stop on ALL active guests globally. Are you absolutely certain?')) {
+            return;
+        }
+
+        showLoading();
+
+        try {
+            const response = await fetch('/admin/emergency-stop-all', { method: 'POST' });
+            const result = await response.json();
+
+            if (result.success) {
+                showToast(`Emergency shutdown completed. ${result.stopped} containers powered off.`, 'warning');
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showToast(result.error || 'Emergency instruction rejected', 'danger');
+            }
+        } catch (error) {
+            console.error('Emergency stop transaction failed:', error);
+            showToast('Network gateway transaction failed', 'danger');
+        } finally {
+            hideLoading();
+        }
+    }
+
+    function refreshNodes() {
+        showLoading();
+        window.location.reload();
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,611 @@
+{% extends "base.html" %}
+
+{% block title %}Manage VPS - {{ panel_name }}{% endblock %}
+
+{% block header_title %}VPS Management{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumb">
+    <a href="{{ url_for('dashboard') }}" class="breadcrumb-item">Dashboard</a>
+    <span class="breadcrumb-separator"><i class="fas fa-chevron-right"></i></span>
+    <a href="{{ url_for('admin_dashboard') }}" class="breadcrumb-item">Admin</a>
+    <span class="breadcrumb-separator"><i class="fas fa-chevron-right"></i></span>
+    <span class="breadcrumb-item active">VPS</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Header Actions -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+    <div>
+        <h2 class="text-2xl font-bold font-display text-white tracking-tight flex items-center gap-2.5">
+            <i class="fas fa-tasks text-cyan-400"></i>
+            VPS Management
+        </h2>
+        <p class="text-slate-400 text-xs mt-1">
+            Monitor, manage, suspend, renew, or edit virtual private servers across all cluster nodes
+        </p>
+    </div>
+    <div class="flex flex-wrap gap-3">
+        <a href="{{ url_for('admin_vps_expiring') }}?days=7" class="btn btn-secondary px-5 py-2.5 rounded-full text-xs font-semibold flex items-center gap-2 border border-amber-500/20 hover:border-amber-500/50" onclick="viewExpiringVPS(event)">
+            <i class="fas fa-clock text-amber-400 animate-pulse"></i> Expiring Soon
+        </a>
+        <a href="{{ url_for('admin_vps_create') }}" class="btn btn-primary px-5 py-2.5 rounded-full text-xs font-semibold flex items-center gap-2 shadow-glow">
+            <i class="fas fa-plus"></i> Create New VPS
+        </a>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="glass-card p-6 mb-8 shadow-glow">
+    <form method="GET" action="{{ url_for('admin_vps') }}" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+            <div class="form-group flex flex-col gap-1.5">
+                <label class="form-label text-slate-300 font-medium text-xs uppercase tracking-wider">Search</label>
+                <input type="text" name="search" class="form-control" placeholder="Name or username..." value="{{ search_query }}">
+            </div>
+
+            <div class="form-group flex flex-col gap-1.5">
+                <label class="form-label text-slate-300 font-medium text-xs uppercase tracking-wider">Node</label>
+                <select name="node_id" class="form-control">
+                    <option value="">All Nodes</option>
+                    {% for node in nodes %}
+                    <option value="{{ node.id }}" {% if node_id == node.id %}selected{% endif %}>{{ node.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group flex flex-col gap-1.5">
+                <label class="form-label text-slate-300 font-medium text-xs uppercase tracking-wider">Status</label>
+                <select name="status" class="form-control">
+                    <option value="">All Status</option>
+                    <option value="running" {% if status_filter == 'running' %}selected{% endif %}>Running</option>
+                    <option value="stopped" {% if status_filter == 'stopped' %}selected{% endif %}>Stopped</option>
+                    <option value="suspended" {% if status_filter == 'suspended' %}selected{% endif %}>Suspended</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary w-full py-2.5 rounded-full text-xs font-semibold flex items-center justify-center gap-2 shadow-glow">
+                    <i class="fas fa-search"></i> <span>Filter Servers</span>
+                </button>
+            </div>
+        </div>
+        {% if search_query or node_id or status_filter %}
+        <div class="flex justify-start">
+            <a href="{{ url_for('admin_vps') }}" class="btn btn-secondary px-4 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 hover:text-white">
+                <i class="fas fa-times text-[10px]"></i> Clear Filters
+            </a>
+        </div>
+        {% endif %}
+    </form>
+</div>
+
+<!-- VPS Table -->
+<div class="glass-card p-6 shadow-glow">
+    <div class="overflow-x-auto">
+        <table class="table w-full">
+            <thead>
+                <tr class="border-b border-white/5">
+                    <th class="pb-3 text-left">VPS</th>
+                    <th class="pb-3 text-left">Owner</th>
+                    <th class="pb-3 text-left">Node</th>
+                    <th class="pb-3 text-left">Status</th>
+                    <th class="pb-3 text-left">Resources</th>
+                    <th class="pb-3 text-left">Expiration</th>
+                    <th class="pb-3 text-left">IP Address</th>
+                    <th class="pb-3 text-left">Created</th>
+                    <th class="pb-3 text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+                {% for vps in vps_list %}
+                <tr class="transition-colors hover:bg-white/[0.02] {% if vps.suspended %}opacity-60 bg-amber-500/5{% endif %}">
+                    <td class="py-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500/20 to-purple-500/10 flex items-center justify-center border border-cyan-500/30">
+                                <i class="fas fa-server text-cyan-400 text-xs"></i>
+                            </div>
+                            <div>
+                                <div class="font-semibold text-white text-sm">{{ vps.hostname or vps.container_name }}</div>
+                                <div class="text-[10px] text-slate-400 font-mono">{{ vps.container_name }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="py-4">
+                        <div class="flex items-center gap-2">
+                            <div class="w-6 h-6 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-[10px] font-bold text-slate-300">
+                                {{ vps.username[:1].upper() }}
+                            </div>
+                            <span class="text-xs text-slate-300">{{ vps.username }}</span>
+                        </div>
+                    </td>
+                    <td class="py-4">
+                        <span class="px-2 py-0.5 rounded bg-cyan-950/40 text-cyan-400 border border-cyan-500/20 text-[10px] font-semibold font-mono">{{ vps.node_name }}</span>
+                    </td>
+                    <td class="py-4">
+                        <div class="vps-status" data-id="{{ vps.id }}">
+                            <div class="flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full 
+                                    {% if vps.suspended %}bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]
+                                    {% elif vps.live_status == 'running' %}bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-pulse
+                                    {% else %}bg-rose-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]{% endif %}">
+                                </span>
+                                <span class="text-xs font-semibold {% if vps.suspended %}text-amber-400{% elif vps.live_status == 'running' %}text-emerald-400{% else %}text-rose-400{% endif %}">
+                                    {% if vps.suspended %}Suspended
+                                    {% elif vps.live_status == 'running' %}Running
+                                    {% else %}Stopped{% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="py-4">
+                        <div class="flex flex-col gap-1">
+                            <div class="flex gap-1.5 flex-wrap">
+                                <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-white/5 text-[9px] font-semibold font-mono">{{ vps.cpu }} Cores</span>
+                                <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-white/5 text-[9px] font-semibold font-mono">{{ vps.ram }}</span>
+                                <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-white/5 text-[9px] font-semibold font-mono">{{ vps.storage }}</span>
+                            </div>
+                            {% if vps.live_status == 'running' and not vps.suspended %}
+                            <div class="text-[10px] text-slate-400 font-mono mt-0.5">
+                                CPU: <span class="text-cyan-400 font-semibold">{{ (vps.live_cpu|default(0))|round(1) }}%</span> | RAM: <span class="text-purple-400 font-semibold">{{ (vps.live_ram.pct|default(0))|round(1) }}%</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="py-4">
+                        <div class="expiration-info" data-vps-id="{{ vps.id }}">
+                            {% if vps.auto_suspend_enabled and vps.expires_at %}
+                                {% set expires_dt = vps.expires_at|parse_datetime %}
+                                {% set current_time = now() %}
+                                {% set is_expired = expires_dt < current_time %}
+                                {% set time_diff = (expires_dt - current_time).total_seconds() %}
+                                {% set days_left = (time_diff / 86400)|int %}
+                                {% set hours_left = (time_diff / 3600)|int %}
+                                
+                                {% if is_expired %}
+                                    <span class="px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[9px] font-semibold flex items-center gap-1">
+                                        <i class="fas fa-exclamation-triangle"></i> Expired
+                                    </span>
+                                {% elif days_left <= 1 %}
+                                    <span class="px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[9px] font-semibold flex items-center gap-1 animate-pulse">
+                                        <i class="fas fa-clock"></i> {{ hours_left }}h left
+                                    </span>
+                                {% elif days_left <= 3 %}
+                                    <span class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] font-semibold flex items-center gap-1">
+                                        <i class="fas fa-clock"></i> {{ days_left }}d left
+                                    </span>
+                                {% elif days_left <= 7 %}
+                                    <span class="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-[9px] font-semibold flex items-center gap-1">
+                                        <i class="fas fa-clock"></i> {{ days_left }}d left
+                                    </span>
+                                {% else %}
+                                    <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-semibold flex items-center gap-1">
+                                        <i class="fas fa-check"></i> {{ days_left }}d left
+                                    </span>
+                                {% endif %}
+                                <div class="text-[9px] text-slate-400 font-mono mt-1">
+                                    {{ expires_dt.strftime('%Y-%m-%d %H:%M') }}
+                                </div>
+                                <button class="btn btn-secondary px-2.5 py-1 rounded-full text-[9px] font-semibold flex items-center gap-1 mt-1 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/10 transition-colors" onclick="renewVPS({{ vps.id }}, '{{ vps.hostname or vps.container_name }}')">
+                                    <i class="fas fa-redo"></i> Renew
+                                </button>
+                            {% else %}
+                                <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-white/5 text-[9px] font-semibold flex items-center gap-1">
+                                    <i class="fas fa-infinity text-[8px]"></i> No Expiry
+                                </span>
+                                <button class="btn btn-secondary px-2.5 py-1 rounded-full text-[9px] font-semibold flex items-center gap-1 mt-1.5 border border-cyan-500/20 text-cyan-400 hover:bg-cyan-500/10 transition-colors" onclick="setExpiration({{ vps.id }}, '{{ vps.hostname or vps.container_name }}')">
+                                    <i class="fas fa-clock"></i> Set
+                                </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="py-4">
+                        {% if vps.ip_alias %}
+                        <div class="flex flex-col gap-0.5 items-start">
+                            <code class="text-xs text-cyan-400 font-mono">{{ vps.ip_alias }}</code>
+                            <span class="px-1.5 py-0.2 rounded bg-cyan-950/40 text-cyan-400 border border-cyan-500/20 text-[8px] font-bold tracking-wider uppercase">Alias</span>
+                        </div>
+                        {% elif vps.ip_address %}
+                        <code class="text-xs text-slate-300 font-mono">{{ vps.ip_address }}</code>
+                        {% else %}
+                        <span class="text-slate-500">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-4 text-xs text-slate-400">{{ vps.created_at|relative_time }}</td>
+                    <td class="py-4 text-right">
+                        <div class="flex items-center justify-end gap-1.5">
+                            <a href="{{ url_for('vps_detail', vps_id=vps.id) }}" class="btn btn-secondary w-8 h-8 rounded-full p-0 flex items-center justify-center border border-white/5 hover:border-cyan-500/30 text-slate-300 hover:text-cyan-400 transition-colors" data-tooltip="View Details">
+                                <i class="fas fa-eye text-xs"></i>
+                            </a>
+                            <a href="{{ url_for('admin_vps_edit', vps_id=vps.id) }}" class="btn btn-secondary w-8 h-8 rounded-full p-0 flex items-center justify-center border border-white/5 hover:border-purple-500/30 text-slate-300 hover:text-purple-400 transition-colors" data-tooltip="Edit Settings">
+                                <i class="fas fa-edit text-xs"></i>
+                            </a>
+                            {% if vps.suspended %}
+                            <button class="btn btn-secondary w-8 h-8 rounded-full p-0 flex items-center justify-center border border-emerald-500/20 hover:border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 transition-colors" onclick="unsuspendVPS({{ vps.id }})" data-tooltip="Unsuspend">
+                                <i class="fas fa-check text-xs"></i>
+                            </button>
+                            {% elif not vps.whitelisted %}
+                            <button class="btn btn-secondary w-8 h-8 rounded-full p-0 flex items-center justify-center border border-amber-500/20 hover:border-amber-500/50 text-amber-400 hover:bg-amber-500/10 transition-colors" onclick="suspendVPS({{ vps.id }})" data-tooltip="Suspend">
+                                <i class="fas fa-ban text-xs"></i>
+                            </button>
+                            {% endif %}
+                            <button class="btn btn-secondary w-8 h-8 rounded-full p-0 flex items-center justify-center border border-rose-500/20 hover:border-rose-500/50 text-rose-400 hover:bg-rose-500/10 transition-colors" onclick="deleteVPS({{ vps.id }}, '{{ vps.container_name }}')" data-tooltip="Delete">
+                                <i class="fas fa-trash text-xs"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <div class="flex items-center justify-center gap-2 mt-8 flex-wrap">
+        {% if page > 1 %}
+        <a href="?page={{ page-1 }}{% if search_query %}&search={{ search_query }}{% endif %}{% if node_id %}&node_id={{ node_id }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="btn btn-secondary px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-1">
+            <i class="fas fa-chevron-left text-[10px]"></i> Previous
+        </a>
+        {% endif %}
+        
+        {% for p in range(1, total_pages + 1) %}
+            {% if p == page %}
+            <span class="px-4 py-2 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-xs font-bold font-mono shadow-glow">{{ p }}</span>
+            {% elif p <= 3 or p >= total_pages - 2 or (p >= page - 2 and p <= page + 2) %}
+            <a href="?page={{ p }}{% if search_query %}&search={{ search_query }}{% endif %}{% if node_id %}&node_id={{ node_id }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="btn btn-secondary px-3.5 py-2 rounded-full text-xs font-semibold font-mono">{{ p }}</a>
+            {% elif p == 4 and page > 5 %}
+            <span class="px-2 text-slate-500 text-xs font-mono select-none">...</span>
+            {% endif %}
+        {% endfor %}
+        
+        {% if page < total_pages %}
+        <a href="?page={{ page+1 }}{% if search_query %}&search={{ search_query }}{% endif %}{% if node_id %}&node_id={{ node_id }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="btn btn-secondary px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-1">
+            Next <i class="fas fa-chevron-right text-[10px]"></i>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .suspended-row {
+        opacity: 0.7;
+        background-color: rgba(245, 158, 11, 0.05);
+    }
+    
+    .expiration-info {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+    
+    .btn-xs {
+        padding: 0.15rem 0.5rem;
+        font-size: 0.7rem;
+        border-radius: 0.25rem;
+    }
+    
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        padding: 1rem;
+    }
+    
+    .modal-content {
+        background: var(--card-bg);
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        max-width: 600px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+    
+    .badge-danger {
+        background-color: #ef4444;
+        color: white;
+    }
+    
+    .badge-warning {
+        background-color: #f59e0b;
+        color: white;
+    }
+    
+    .badge-success {
+        background-color: #10b981;
+        color: white;
+    }
+    
+    .badge-secondary {
+        background-color: #6b7280;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // View Expiring VPS
+    async function viewExpiringVPS(event) {
+        event.preventDefault();
+        const days = prompt('Show VPS expiring in how many days?', '7');
+        if (days === null) return;
+
+        showLoading();
+
+        try {
+            const response = await fetch(`/admin/vps/expiring?days=${days}`);
+            const result = await response.json();
+
+            if (result.success) {
+                displayExpiringVPS(result.data, days);
+            } else {
+                showToast(result.error || 'Failed to fetch expiring VPS', 'danger');
+            }
+        } catch (error) {
+            console.error('Fetch error:', error);
+            showToast('Network error: ' + error.message, 'danger');
+        } finally {
+            hideLoading();
+        }
+    }
+
+    // Display Expiring VPS Modal
+    function displayExpiringVPS(vpsList, days) {
+        if (vpsList.length === 0) {
+            showToast(`No VPS expiring in the next ${days} days`, 'info');
+            return;
+        }
+
+        let html = `
+            <div style="max-height: 500px; overflow-y: auto;">
+                <h3 style="margin-bottom: 1rem;">VPS Expiring in Next ${days} Days (${vpsList.length})</h3>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>VPS</th>
+                            <th>Owner</th>
+                            <th>Status</th>
+                            <th>Expires</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        vpsList.forEach(vps => {
+            const statusClass = vps.is_expired ? 'badge-danger' : (vps.days_remaining <= 3 ? 'badge-warning' : 'badge-info');
+            const statusText = vps.is_expired ? 'EXPIRED' : `${vps.days_remaining}d left`;
+            
+            html += `
+                <tr style="${vps.is_expired ? 'background-color: rgba(239, 68, 68, 0.1);' : ''}">
+                    <td>
+                        <div style="font-weight: 600;">${vps.hostname || vps.container_name}</div>
+                        <div style="font-size: 0.7rem; color: var(--text-muted);">${vps.container_name}</div>
+                    </td>
+                    <td>${vps.username}</td>
+                    <td>
+                        <span class="badge ${statusClass}">${statusText}</span>
+                        ${vps.suspended ? '<span class="badge badge-danger">Suspended</span>' : ''}
+                    </td>
+                    <td>
+                        <div>${vps.expires_at_formatted}</div>
+                        <small style="color: var(--text-muted);">${vps.hours_remaining}h remaining</small>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-success" onclick="renewVPSFromModal(${vps.id}, '${vps.hostname || vps.container_name}')">
+                            <i class="fas fa-redo"></i> Renew
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        // Create modal
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 900px;">
+                ${html}
+                <div style="margin-top: 1rem; text-align: right;">
+                    <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove()">Close</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    // Renew VPS
+    async function renewVPS(vpsId, vpsName) {
+        const days = prompt(`Renew "${vpsName}" for how many days?`, '30');
+        if (days === null || days === '') return;
+
+        const daysNum = parseInt(days);
+        if (isNaN(daysNum) || daysNum <= 0) {
+            showToast('Please enter a valid number of days', 'danger');
+            return;
+        }
+
+        showLoading();
+
+        try {
+            const response = await fetch(`/admin/vps/${vpsId}/renew`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ days: daysNum })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showToast(`VPS renewed for ${daysNum} days. New expiration: ${result.expires_at_formatted}`, 'success');
+                setTimeout(() => window.location.reload(), 2000);
+            } else {
+                showToast(result.error || 'Failed to renew VPS', 'danger');
+            }
+        } catch (error) {
+            console.error('Renew error:', error);
+            showToast('Network error: ' + error.message, 'danger');
+        } finally {
+            hideLoading();
+        }
+    }
+
+    // Renew VPS from modal
+    function renewVPSFromModal(vpsId, vpsName) {
+        document.querySelector('.modal-overlay').remove();
+        renewVPS(vpsId, vpsName);
+    }
+
+    // Set Expiration
+    async function setExpiration(vpsId, vpsName) {
+        const days = prompt(`Set expiration for "${vpsName}" (days):`, '30');
+        if (days === null || days === '') return;
+
+        const daysNum = parseInt(days);
+        if (isNaN(daysNum) || daysNum < 0) {
+            showToast('Please enter a valid number of days', 'danger');
+            return;
+        }
+
+        showLoading();
+
+        try {
+            const response = await fetch(`/admin/vps/${vpsId}/expiration`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    auto_suspend_enabled: daysNum > 0,
+                    expiration_days: daysNum 
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showToast(`Expiration set to ${daysNum} days`, 'success');
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showToast(result.error || 'Failed to set expiration', 'danger');
+            }
+        } catch (error) {
+            console.error('Set expiration error:', error);
+            showToast('Network error: ' + error.message, 'danger');
+        } finally {
+            hideLoading();
+        }
+    }
+
+    // Suspend VPS
+    async function suspendVPS(vpsId) {
+        const reason = prompt('Enter suspension reason:', 'Admin action');
+        if (reason === null) return;
+
+        showLoading();
+
+        try {
+            const response = await fetch(`/admin/vps/${vpsId}/suspend`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ reason: reason })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showToast('VPS suspended successfully', 'success');
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showToast(result.error || 'Failed to suspend VPS', 'danger');
+            }
+        } catch (error) {
+            console.error('Suspend error:', error);
+            showToast('Network error: ' + error.message, 'danger');
+        } finally {
+            hideLoading();
+        }
+    }
+
+    // Unsuspend VPS
+    async function unsuspendVPS(vpsId) {
+        if (!confirm('Unsuspend this VPS?')) {
+            return;
+        }
+
+        showLoading();
+
+        try {
+            const response = await fetch(`/admin/vps/${vpsId}/unsuspend`, {
+                method: 'POST'
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showToast('VPS unsuspended successfully', 'success');
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showToast(result.error || 'Failed to unsuspend VPS', 'danger');
+            }
+        } catch (error) {
+            console.error('Unsuspend error:', error);
+            showToast('Network error: ' + error.message, 'danger');
+        } finally {
+            hideLoading();
+        }
+    }
+
+    // Delete VPS
+    function deleteVPS(vpsId, name) {
+        if (!confirm(`Are you sure you want to delete VPS "${name}"? This cannot be undone.`)) {
+            return;
+        }
+
+        showLoading();
+
+        fetch(`/admin/vps/${vpsId}/delete`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('VPS deleted successfully', 'success');
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showToast(data.error || 'Failed to delete VPS', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Delete error:', error);
+            showToast('Network error: ' + error.message, 'danger');
+        })
+        .finally(() => {
+            hideLoading();
+        });
+    }
+</script>
+{% endblock %}

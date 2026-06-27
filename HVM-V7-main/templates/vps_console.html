@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Console - {{ vps.container_name }}</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Xterm.js for terminal emulation -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm/css/xterm.css" />
+    <script src="https://cdn.jsdelivr.net/npm/xterm/lib/xterm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit/lib/xterm-addon-fit.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links/lib/xterm-addon-web-links.js"></script>
+
+    <style>
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Glassmorphism custom styles */
+        .glass-panel {
+            background: rgba(10, 12, 16, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Custom terminal focus decoration */
+        .xterm-viewport {
+            background-color: #0b0d10 !important;
+        }
+        .xterm {
+            padding: 1rem;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans select-none antialiased relative overflow-hidden bg-slate-950">
+    <!-- Subtle background glowing accents -->
+    <div class="absolute -right-32 -top-32 w-96 h-96 rounded-full bg-indigo-500/5 blur-3xl pointer-events-none"></div>
+    <div class="absolute -left-32 -bottom-32 w-96 h-96 rounded-full bg-purple-500/5 blur-3xl pointer-events-none"></div>
+
+    <!-- Console Header -->
+    <header class="glass-panel border-b border-white/5 px-4 py-3 relative z-10">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="flex items-center gap-4 flex-wrap">
+                <a href="{{ url_for('vps_detail', vps_id=vps.id) }}" class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-white/5 hover:border-indigo-500/25 transition text-xs font-bold font-display flex items-center gap-1.5">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back</span>
+                </a>
+                
+                <div class="flex items-center gap-2.5">
+                    <span class="font-display font-bold text-sm text-white flex items-center gap-2">
+                        <i class="fas fa-terminal text-indigo-400"></i>
+                        {{ vps.container_name }}
+                    </span>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold uppercase tracking-wider" id="statusBadge">
+                        <span class="relative flex h-1.5 w-1.5">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                        </span>
+                        <span>Connected</span>
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Quick action utility bar -->
+            <div class="flex flex-wrap items-center gap-1.5">
+                <button onclick="reconnectConsole()" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-white/5 hover:border-white/10 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>Reconnect</span>
+                </button>
+                <button onclick="clearTerminal()" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-white/5 hover:border-white/10 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                    <i class="fas fa-eraser"></i>
+                    <span>Clear</span>
+                </button>
+                <button onclick="copyToClipboard()" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-white/5 hover:border-white/10 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                    <i class="fas fa-copy"></i>
+                    <span>Copy</span>
+                </button>
+                <button onclick="pasteFromClipboard()" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-white/5 hover:border-white/10 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                    <i class="fas fa-paste"></i>
+                    <span>Paste</span>
+                </button>
+                <button onclick="downloadSession()" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-white/5 hover:border-white/10 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                    <i class="fas fa-download"></i>
+                    <span>Download</span>
+                </button>
+                <button onclick="showRestartModal()" class="px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 hover:border-rose-500/30 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer">
+                    <i class="fas fa-power-off animate-[pulse_2s_infinite]"></i>
+                    <span>Restart</span>
+                </button>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Main Workspace Console Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 flex flex-col min-h-0 relative z-10 gap-4">
+        <div class="flex-1 bg-slate-950 rounded-2xl border border-white/5 shadow-2xl flex flex-col overflow-hidden">
+            <!-- Tab controllers -->
+            <div class="bg-slate-900/40 border-b border-white/5 px-4 py-2 flex gap-1.5 overflow-x-auto shrink-0">
+                <button class="px-3 py-1.5 rounded-lg text-xs font-bold font-display cursor-pointer transition flex items-center gap-1.5 active bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 tab" onclick="switchTab('terminal')">
+                    <i class="fas fa-terminal"></i>
+                    <span>Terminal Stream</span>
+                </button>
+                <button class="px-3 py-1.5 rounded-lg text-xs font-bold font-display cursor-pointer transition flex items-center gap-1.5 text-slate-400 hover:text-white tab" onclick="switchTab('logs')">
+                    <i class="fas fa-list"></i>
+                    <span>Session Logs</span>
+                </button>
+                <button class="px-3 py-1.5 rounded-lg text-xs font-bold font-display cursor-pointer transition flex items-center gap-1.5 text-slate-400 hover:text-white tab" onclick="switchTab('info')">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Instance Info</span>
+                </button>
+            </div>
+            
+            <!-- Tab content viewports -->
+            <div class="flex-1 min-h-0 relative">
+                <!-- Xterm.js terminal stream wrapper -->
+                <div id="terminal" class="absolute inset-0 bg-slate-950 overflow-hidden block"></div>
+                
+                <!-- Session historical log panel -->
+                <div id="sessionLogs" class="absolute inset-0 overflow-y-auto p-5 bg-[#0a0c10] hidden space-y-4">
+                    <div class="flex items-center gap-2 pb-3 border-b border-white/5">
+                        <i class="fas fa-history text-indigo-400"></i>
+                        <h4 class="font-display font-bold text-sm text-slate-200">Historical Interaction Logs</h4>
+                    </div>
+                    <div id="logsContainer" class="font-mono text-xs text-slate-400 leading-relaxed space-y-1">
+                        <!-- Logs injected by JavaScript dynamically -->
+                    </div>
+                </div>
+                
+                <!-- Server info panel grid -->
+                <div id="infoPanel" class="absolute inset-0 overflow-y-auto p-5 bg-[#0a0c10] hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Connection info table -->
+                        <div class="glass-panel rounded-xl p-5 space-y-4">
+                            <h5 class="font-display font-bold text-xs uppercase tracking-wider text-indigo-400 flex items-center gap-2">
+                                <i class="fas fa-plug text-[11px]"></i> Connection status
+                            </h5>
+                            <div class="space-y-2.5 text-xs">
+                                <div class="flex justify-between py-1 border-b border-white/[0.03]">
+                                    <span class="text-slate-400">Stream Status</span>
+                                    <span id="infoStatus" class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">Connected</span>
+                                </div>
+                                <div class="flex justify-between py-1 border-b border-white/[0.03]">
+                                    <span class="text-slate-400">Session ID / Timer</span>
+                                    <span id="sessionId" class="font-mono text-[11px] font-bold text-slate-200">-</span>
+                                </div>
+                                <div class="flex justify-between py-1 border-b border-white/[0.03]">
+                                    <span class="text-slate-400">Connected Since</span>
+                                    <span id="connectedSince" class="font-semibold text-slate-300">-</span>
+                                </div>
+                                <div class="flex justify-between py-1 border-b border-white/[0.03]">
+                                    <span class="text-slate-400">Inbound RX Volume</span>
+                                    <span id="dataReceived" class="font-mono text-[11px] text-slate-200">0.00 KB</span>
+                                </div>
+                                <div class="flex justify-between py-1 border-b border-white/[0.03] last:border-0 pb-0">
+                                    <span class="text-slate-400">Outbound TX Volume</span>
+                                    <span id="dataSent" class="font-mono text-[11px] text-slate-200">0.00 KB</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Terminal Shortcuts card -->
+                        <div class="glass-panel rounded-xl p-5 space-y-4">
+                            <h5 class="font-display font-bold text-xs uppercase tracking-wider text-indigo-400 flex items-center gap-2">
+                                <i class="fas fa-keyboard text-[11px]"></i> Terminal Shortcuts
+                            </h5>
+                            <div class="grid grid-cols-2 gap-3 text-xs">
+                                <div class="space-y-1">
+                                    <span class="px-1.5 py-0.5 rounded bg-slate-900 border border-white/5 font-mono text-[10px] text-indigo-400">Ctrl + Shift + C</span>
+                                    <p class="text-[10px] text-slate-500 mt-1">Copy selected text</p>
+                                </div>
+                                <div class="space-y-1">
+                                    <span class="px-1.5 py-0.5 rounded bg-slate-900 border border-white/5 font-mono text-[10px] text-indigo-400">Ctrl + Shift + V</span>
+                                    <p class="text-[10px] text-slate-500 mt-1">Paste terminal content</p>
+                                </div>
+                                <div class="space-y-1">
+                                    <span class="px-1.5 py-0.5 rounded bg-slate-900 border border-white/5 font-mono text-[10px] text-indigo-400">Ctrl + C</span>
+                                    <p class="text-[10px] text-slate-500 mt-1">SIGINT current execution</p>
+                                </div>
+                                <div class="space-y-1">
+                                    <span class="px-1.5 py-0.5 rounded bg-slate-900 border border-white/5 font-mono text-[10px] text-indigo-400">Ctrl + L</span>
+                                    <p class="text-[10px] text-slate-500 mt-1">Flush screen</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- VPS info details -->
+                        <div class="glass-panel rounded-xl p-5 space-y-4">
+                            <h5 class="font-display font-bold text-xs uppercase tracking-wider text-indigo-400 flex items-center gap-2">
+                                <i class="fas fa-server text-[11px]"></i> Container Allocation
+                            </h5>
+                            <div class="space-y-2.5 text-xs">
+                                <div class="flex justify-between py-1 border-b border-white/[0.03]">
+                                    <span class="text-slate-400">Container Name</span>
+                                    <span class="text-slate-200 font-bold font-mono">{{ vps.container_name }}</span>
+                                </div>
+                                <div class="flex justify-between py-1 border-b border-white/[0.03]">
+                                    <span class="text-slate-400">System OS</span>
+                                    <span class="text-slate-300 font-semibold">{{ vps.os_version }}</span>
+                                </div>
+                                <div class="flex justify-between py-1 border-b border-white/[0.03]">
+                                    <span class="text-slate-400">Configured specs</span>
+                                    <span class="text-slate-300">{{ vps.config }}</span>
+                                </div>
+                                <div class="flex justify-between py-1 border-b border-white/[0.03] last:border-0 pb-0">
+                                    <span class="text-slate-400">Allocated</span>
+                                    <span class="text-slate-500 font-mono text-[11px]">{{ vps.created_at }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Connection status bar bottom footer -->
+            <div class="bg-slate-900/60 border-t border-white/5 px-4 py-2.5 flex justify-between items-center text-xs text-slate-500 shrink-0">
+                <div class="flex items-center gap-2 font-semibold">
+                    <span class="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-pulse" id="connectionIndicator"></span>
+                    <span class="text-slate-400" id="connectionText">Session Connected</span>
+                </div>
+                
+                <div class="hidden md:flex items-center gap-6 text-[10px] font-bold text-slate-500 font-display uppercase tracking-wider">
+                    <div class="flex items-center gap-1.5">
+                        <i class="fas fa-keyboard"></i>
+                        <span>Ctrl+Shift+C/V to copy/paste</span>
+                    </div>
+                    <div class="flex items-center gap-1.5" id="cursorPosition">
+                        <i class="fas fa-cursor"></i>
+                        <span>Ln 1, Col 1</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Restart Confirmation Modal -->
+    <div id="restartModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300">
+        <div class="glass-panel w-full max-w-md rounded-2xl overflow-hidden shadow-2xl border border-white/10 transform scale-95 transition-all duration-300 modal-box-container">
+            <div class="px-5 py-4 border-b border-white/5 bg-white/[0.01]">
+                <h3 class="font-display font-bold text-sm text-white flex items-center gap-2">
+                    <i class="fas fa-exclamation-triangle text-amber-400"></i> Confirm Restart Reboot
+                </h3>
+            </div>
+            <div class="p-5 space-y-3 text-xs text-slate-300 leading-relaxed">
+                <p>Are you sure you want to reboot this VPS instance?</p>
+                <p class="text-slate-500"><i class="fas fa-info-circle mr-1 text-[11px]"></i> Your active terminal session will be disconnected and will attempt automatic reconnection after reboot completes.</p>
+            </div>
+            <div class="px-5 py-4 border-t border-white/5 bg-slate-950/30 flex justify-end gap-2">
+                <button onclick="hideRestartModal()" class="px-4 py-2 text-xs font-bold rounded-xl border border-white/5 hover:border-white/10 text-slate-300 hover:text-white transition cursor-pointer">Cancel</button>
+                <button onclick="restartVPS()" class="px-4 py-2 text-xs font-bold rounded-xl bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/20 transition cursor-pointer">Restart VPS</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Global Toast Container -->
+    <div class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none" id="toastContainer"></div>
+    
+    <script>
+        // VPS Data
+        const vpsData = {
+            id: {{ vps.id }},
+            name: '{{ vps.container_name }}',
+            nodeId: {{ vps.node_id }}
+        };
+        
+        // Terminal and WebSocket variables
+        let terminal = null;
+        let socket = null;
+        let fitAddon = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+        let reconnectTimeout = null;
+        let sessionStartTime = null;
+        let dataReceived = 0;
+        let dataSent = 0;
+        let sessionLogs = [];
+        let currentTab = 'terminal';
+        
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initTerminal();
+            connectWebSocket();
+            startStatsUpdate();
+        });
+        
+        // Initialize xterm.js terminal
+        function initTerminal() {
+            const terminalElement = document.getElementById('terminal');
+            
+            terminal = new Terminal({
+                cursorBlink: true,
+                cursorStyle: 'block',
+                theme: {
+                    background: '#0b0d10',
+                    foreground: '#f0f0f0',
+                    cursor: '#6366f1',
+                    selection: 'rgba(255, 255, 255, 0.15)',
+                    black: '#1e293b',
+                    red: '#f43f5e',
+                    green: '#10b981',
+                    yellow: '#f59e0b',
+                    blue: '#3b82f6',
+                    magenta: '#a855f7',
+                    cyan: '#06b6d4',
+                    white: '#cbd5e1',
+                    brightBlack: '#475569',
+                    brightRed: '#fda4af',
+                    brightGreen: '#6ee7b7',
+                    brightYellow: '#fde047',
+                    brightBlue: '#93c5fd',
+                    brightMagenta: '#c084fc',
+                    brightCyan: '#67e8f9',
+                    brightWhite: '#f8fafc'
+                },
+                fontFamily: 'JetBrains Mono, Menlo, Monaco, monospace',
+                fontSize: 13,
+                lineHeight: 1.25,
+                scrollback: 10000
+            });
+            
+            fitAddon = new FitAddon.FitAddon();
+            terminal.loadAddon(fitAddon);
+            
+            const webLinksAddon = new WebLinksAddon.WebLinksAddon();
+            terminal.loadAddon(webLinksAddon);
+            
+            terminal.open(terminalElement);
+            
+            setTimeout(() => {
+                fitAddon.fit();
+            }, 100);
+            
+            terminal.onData(function(data) {
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({
+                        type: 'input',
+                        data: data
+                    }));
+                    
+                    dataSent += new Blob([data]).size;
+                    updateInfoStats();
+                    
+                    if (data.charCodeAt(0) !== 13) {
+                        addToSessionLog('input', data);
+                    }
+                }
+            });
+            
+            terminal.onResize(function(size) {
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({
+                        type: 'resize',
+                        cols: size.cols,
+                        rows: size.rows
+                    }));
+                }
+            });
+            
+            window.addEventListener('resize', function() {
+                if (fitAddon && currentTab === 'terminal') {
+                    fitAddon.fit();
+                }
+            });
+            
+            terminal.onCursorMove(function() {
+                const buffer = terminal.buffer.active;
+                const cursorY = buffer.cursorY + 1;
+                const cursorX = buffer.cursorX + 1;
+                document.getElementById('cursorPosition').innerHTML = 
+                    `<i class="fas fa-cursor"></i><span>Ln ${cursorY}, Col ${cursorX}</span>`;
+            });
+        }
+        
+        // WebSocket connection
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/console/${vpsData.id}`;
+            
+            updateConnectionStatus('connecting', 'Connecting...');
+            
+            socket = new WebSocket(wsUrl);
+            
+            socket.onopen = function() {
+                updateConnectionStatus('connected', 'Session Connected');
+                sessionStartTime = new Date();
+                document.getElementById('connectedSince').textContent = sessionStartTime.toLocaleTimeString();
+                reconnectAttempts = 0;
+                
+                if (terminal) {
+                    terminal.write('\r\n\x1b[32m✓ Connected to console session\x1b[0m\r\n');
+                    terminal.write('\x1b[33m• Session started at ' + sessionStartTime.toLocaleString() + '\x1b[0m\r\n');
+                    terminal.write('\x1b[33m• Type "exit" to close the session\x1b[0m\r\n\n');
+                }
+                
+                showToast('Connected to console', 'success');
+            };
+            
+            socket.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    
+                    if (data.type === 'output') {
+                        if (terminal && currentTab === 'terminal') {
+                            terminal.write(data.data);
+                        }
+                        dataReceived += new Blob([data.data]).size;
+                        updateInfoStats();
+                        addToSessionLog('output', data.data);
+                    } else if (data.type === 'error') {
+                        terminal.write('\r\n\x1b[31mError: ' + data.message + '\x1b[0m\r\n');
+                        showToast(data.message, 'danger');
+                    } else if (data.type === 'connected') {
+                        terminal.write('\r\n\x1b[32m' + data.message + '\x1b[0m\r\n');
+                    }
+                } catch (e) {
+                    console.error('Error parsing message:', e);
+                }
+            };
+            
+            socket.onclose = function() {
+                updateConnectionStatus('disconnected', 'Disconnected');
+                
+                if (terminal) {
+                    terminal.write('\r\n\x1b[31m✗ Connection closed\x1b[0m\r\n');
+                }
+                
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    reconnectAttempts++;
+                    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+                    
+                    terminal.write(`\x1b[33mAttempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts}) in ${delay/1000}s...\x1b[0m\r\n`);
+                    
+                    if (reconnectTimeout) {
+                        clearTimeout(reconnectTimeout);
+                    }
+                    reconnectTimeout = setTimeout(connectWebSocket, delay);
+                } else {
+                    terminal.write('\x1b[31mMax reconnection attempts reached. Please reconnect manually.\x1b[0m\r\n');
+                }
+            };
+            
+            socket.onerror = function(error) {
+                console.error('WebSocket error:', error);
+                updateConnectionStatus('disconnected', 'Error');
+                showToast('Connection error', 'danger');
+            };
+        }
+        
+        function updateConnectionStatus(status, text) {
+            const indicator = document.getElementById('connectionIndicator');
+            const statusText = document.getElementById('connectionText');
+            const statusBadge = document.getElementById('statusBadge');
+            
+            if (status === 'connected') {
+                indicator.className = 'h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]';
+                statusText.textContent = text;
+                statusBadge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold uppercase tracking-wider';
+                statusBadge.innerHTML = '<i class="fas fa-circle text-[9px]"></i> Connected';
+            } else if (status === 'connecting') {
+                indicator.className = 'h-2 w-2 rounded-full bg-amber-500 animate-pulse';
+                statusText.textContent = text;
+                statusBadge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-bold uppercase tracking-wider';
+                statusBadge.innerHTML = '<i class="fas fa-spinner fa-spin text-[9px]"></i> Connecting';
+            } else {
+                indicator.className = 'h-2 w-2 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]';
+                statusText.textContent = text;
+                statusBadge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[10px] font-bold uppercase tracking-wider';
+                statusBadge.innerHTML = '<i class="fas fa-circle text-[9px]"></i> Disconnected';
+            }
+            
+            const infoStatus = document.getElementById('infoStatus');
+            if (infoStatus) {
+                if (status === 'connected') {
+                    infoStatus.className = 'inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/20';
+                    infoStatus.textContent = 'Connected';
+                } else if (status === 'connecting') {
+                    infoStatus.className = 'inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-amber-500/15 text-amber-400 border border-amber-500/20';
+                    infoStatus.textContent = 'Connecting';
+                } else {
+                    infoStatus.className = 'inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-rose-500/15 text-rose-400 border border-rose-500/20';
+                    infoStatus.textContent = 'Disconnected';
+                }
+            }
+        }
+        
+        function reconnectConsole() {
+            if (socket) socket.close();
+            if (reconnectTimeout) clearTimeout(reconnectTimeout);
+            reconnectAttempts = 0;
+            connectWebSocket();
+        }
+        
+        function clearTerminal() {
+            if (terminal) {
+                terminal.clear();
+                showToast('Terminal screen cleared', 'success');
+            }
+        }
+        
+        function copyToClipboard() {
+            if (terminal && terminal.hasSelection()) {
+                const selection = terminal.getSelection();
+                navigator.clipboard.writeText(selection).then(() => {
+                    showToast('Selected terminal text copied', 'success');
+                }).catch(() => {
+                    showToast('Failed to copy text', 'danger');
+                });
+            } else {
+                showToast('No text selected in terminal', 'warning');
+            }
+        }
+        
+        function pasteFromClipboard() {
+            navigator.clipboard.readText().then(text => {
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({
+                        type: 'input',
+                        data: text
+                    }));
+                    showToast('Pasted text from clipboard', 'success');
+                }
+            }).catch(() => {
+                showToast('Failed to paste content', 'danger');
+            });
+        }
+        
+        function downloadSession() {
+            let logContent = '';
+            sessionLogs.forEach(log => { logContent += log.data; });
+            
+            const blob = new Blob([logContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `vps-console-log-${vpsData.name}-${new Date().toISOString().slice(0,10)}.log`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Session interactive log downloaded', 'success');
+        }
+        
+        function addToSessionLog(type, data) {
+            sessionLogs.push({
+                type: type,
+                data: data,
+                timestamp: new Date().toISOString()
+            });
+            if (currentTab === 'logs') {
+                updateLogsDisplay();
+            }
+        }
+        
+        function updateLogsDisplay() {
+            const logsContainer = document.getElementById('logsContainer');
+            if (logsContainer) {
+                let html = '';
+                sessionLogs.slice(-100).forEach(log => {
+                    const time = new Date(log.timestamp).toLocaleTimeString();
+                    const color = log.type === 'input' ? 'text-emerald-400' : 'text-slate-400';
+                    const icon = log.type === 'input' ? 'fa-arrow-right' : 'fa-arrow-left';
+                    
+                    html += `<div class="flex gap-2.5 items-start py-0.5">
+                        <span class="text-slate-600 font-medium shrink-0">[${time}]</span>
+                        <span class="${color} flex items-center gap-1.5 break-all">
+                            <i class="fas ${icon} text-[9px]"></i>
+                            <span>${log.data.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>
+                        </span>
+                    </div>`;
+                });
+                logsContainer.innerHTML = html || '<p class="text-slate-600 italic">No historical operations logged in this session yet.</p>';
+            }
+        }
+        
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            document.querySelectorAll('.tab').forEach(btn => {
+                btn.classList.remove('active', 'bg-indigo-500/10', 'text-indigo-400', 'border-indigo-500/20');
+                btn.classList.add('text-slate-400', 'hover:text-white');
+            });
+            
+            const clickedBtn = event.target.closest('.tab');
+            if (clickedBtn) {
+                clickedBtn.classList.add('active', 'bg-indigo-500/10', 'text-indigo-400', 'border-indigo-500/20');
+                clickedBtn.classList.remove('text-slate-400', 'hover:text-white');
+            }
+            
+            document.getElementById('terminal').style.display = 'none';
+            document.getElementById('sessionLogs').style.display = 'none';
+            document.getElementById('infoPanel').style.display = 'none';
+            
+            if (tab === 'terminal') {
+                document.getElementById('terminal').style.display = 'block';
+                setTimeout(() => fitAddon.fit(), 100);
+            } else if (tab === 'logs') {
+                document.getElementById('sessionLogs').style.display = 'block';
+                updateLogsDisplay();
+            } else if (tab === 'info') {
+                document.getElementById('infoPanel').style.display = 'block';
+            }
+        }
+        
+        function updateInfoStats() {
+            document.getElementById('dataReceived').textContent = (dataReceived / 1024).toFixed(2) + ' KB';
+            document.getElementById('dataSent').textContent = (dataSent / 1024).toFixed(2) + ' KB';
+        }
+        
+        function startStatsUpdate() {
+            setInterval(() => {
+                if (sessionStartTime) {
+                    const duration = Math.floor((new Date() - sessionStartTime) / 1000);
+                    const hours = Math.floor(duration / 3600);
+                    const minutes = Math.floor((duration % 3600) / 60);
+                    const seconds = duration % 60;
+                    document.getElementById('sessionId').textContent = 
+                        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                }
+            }, 1000);
+        }
+        
+        function showRestartModal() {
+            const modal = document.getElementById('restartModal');
+            if (modal) {
+                modal.classList.remove('pointer-events-none', 'opacity-0');
+                modal.classList.add('opacity-100');
+                const box = modal.querySelector('.modal-box-container');
+                if (box) {
+                    box.classList.remove('scale-95');
+                    box.classList.add('scale-100');
+                }
+            }
+        }
+        
+        function hideRestartModal() {
+            const modal = document.getElementById('restartModal');
+            if (modal) {
+                modal.classList.add('pointer-events-none', 'opacity-0');
+                modal.classList.remove('opacity-100');
+                const box = modal.querySelector('.modal-box-container');
+                if (box) {
+                    box.classList.remove('scale-100');
+                    box.classList.add('scale-95');
+                }
+            }
+        }
+        
+        function restartVPS() {
+            hideRestartModal();
+            showToast('Rebooting container instance...', 'warning');
+            
+            fetch(`/vps/${vpsData.id}/control/restart`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Instance reboot sequence initiated', 'success');
+                    if (socket) socket.close();
+                    setTimeout(() => { reconnectConsole(); }, 5000);
+                } else {
+                    showToast('Failed to restart VPS: ' + data.error, 'danger');
+                }
+            })
+            .catch(error => {
+                showToast('Reboot connection failure', 'danger');
+                console.error('Restart error:', error);
+            });
+        }
+        
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            toast.className = 'px-4 py-3 rounded-xl border flex items-center gap-3 shadow-2xl backdrop-blur-md pointer-events-auto transition duration-300 transform translate-y-2 opacity-0 text-xs font-bold';
+            
+            let icon = 'fa-info-circle';
+            let colors = '';
+            
+            if (type === 'success') {
+                icon = 'fa-check-circle';
+                colors = 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400';
+            } else if (type === 'danger') {
+                icon = 'fa-exclamation-circle';
+                colors = 'bg-rose-500/10 border-rose-500/20 text-rose-400';
+            } else if (type === 'warning') {
+                icon = 'fa-exclamation-triangle';
+                colors = 'bg-amber-500/10 border-amber-500/20 text-amber-400';
+            } else {
+                icon = 'fa-info-circle';
+                colors = 'bg-slate-900/80 border-white/5 text-slate-300';
+            }
+            
+            toast.className += ' ' + colors;
+            toast.innerHTML = `
+                <i class="fas ${icon} text-sm shrink-0"></i>
+                <span class="font-medium">${message}</span>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Animate In
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+            
+            // Auto Remove
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+        
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+                e.preventDefault();
+                copyToClipboard();
+            }
+            if (e.ctrlKey && e.shiftKey && e.key === 'V') {
+                e.preventDefault();
+                pasteFromClipboard();
+            }
+            if (e.ctrlKey && e.key === 'l' && currentTab !== 'terminal') {
+                e.preventDefault();
+                clearTerminal();
+            }
+        });
+        
+        document.addEventListener('keydown', function(e) {
+            if (currentTab === 'terminal') {
+                if (e.ctrlKey && e.key !== 'c') {
+                    e.preventDefault();
+                }
+            }
+        });
+        
+        window.addEventListener('beforeunload', function() {
+            if (socket) socket.close();
+        });
+    </script>
+</body>
+</html>

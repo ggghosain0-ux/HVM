@@ -1,0 +1,69 @@
+<!-- templates/health.html -->
+{% extends "base.html" %}
+
+{% block title %}Health Check - {{ panel_name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto p-4 animate-[fadeIn_0.4s_ease-out]">
+    <div class="bg-slate-900/40 border border-white/5 rounded-3xl p-8 shadow-2xl relative overflow-hidden backdrop-blur-md">
+        <!-- Ambient decoration glow -->
+        <div class="absolute -right-24 -top-24 w-64 h-64 rounded-full bg-indigo-500/5 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 space-y-6">
+            <!-- Header status display -->
+            <div class="text-center space-y-4">
+                {% if status == 'ok' %}
+                <div class="w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/5 animate-[pulse_3s_infinite]">
+                    <i class="fas fa-check-circle text-2xl"></i>
+                </div>
+                <div class="space-y-1">
+                    <h2 class="text-lg font-bold font-display text-white">All Systems Operational</h2>
+                    <p class="text-xs text-slate-400">All local hypervisor services and cluster databases are sync\'d.</p>
+                </div>
+                {% else %}
+                <div class="w-16 h-16 rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center mx-auto shadow-lg shadow-rose-500/5 animate-bounce">
+                    <i class="fas fa-exclamation-triangle text-2xl"></i>
+                </div>
+                <div class="space-y-1">
+                    <h2 class="text-lg font-bold font-display text-white">System Issues Detected</h2>
+                    <p class="text-xs text-slate-400">Cluster reporting degradation on local hypervisor sub-routines.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- JSON Data payload container -->
+            <div class="bg-slate-950/70 border border-white/5 rounded-2xl p-4 overflow-x-auto text-left">
+                <pre class="font-mono text-[11px] text-slate-300 leading-relaxed">{{ health_data|tojson(indent=2) }}</pre>
+            </div>
+
+            <!-- Component checklist grid -->
+            <div class="space-y-3">
+                <h3 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-display">Service Status Matrix</h3>
+                
+                <div class="divide-y divide-white/[0.03] border-t border-b border-white/5">
+                    <div class="py-3 flex items-center justify-between">
+                        <span class="text-xs text-slate-300 font-medium">Database Node</span>
+                        {% if health_data.database == 'ok' %}
+                        <span class="px-2.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-400">Connected</span>
+                        {% else %}
+                        <span class="px-2.5 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/20 text-[10px] font-bold text-rose-400">Error</span>
+                        {% endif %}
+                    </div>
+                    <div class="py-3 flex items-center justify-between">
+                        <span class="text-xs text-slate-300 font-medium">LXC Virtualizer</span>
+                        {% if health_data.lxc %}
+                        <span class="px-2.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-400">Available</span>
+                        {% else %}
+                        <span class="px-2.5 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-[10px] font-bold text-amber-400">Unknown</span>
+                        {% endif %}
+                    </div>
+                    <div class="py-3 flex items-center justify-between">
+                        <span class="text-xs text-slate-300 font-medium">Core API</span>
+                        <span class="px-2.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-bold text-emerald-400">Operational</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

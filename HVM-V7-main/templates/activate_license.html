@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Activate License - {{ panel_name }}</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="font-sans antialiased bg-[#030712] min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+    
+    <!-- Ambient Radial Glow Nodes -->
+    <div class="absolute -left-48 -bottom-48 w-96 h-96 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none"></div>
+    <div class="absolute -right-48 -top-48 w-96 h-96 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none"></div>
+
+    <div class="w-full max-w-xl relative z-10 animate-[fadeIn_0.5s_ease-out]">
+        <div class="bg-slate-900/40 border border-white/5 rounded-3xl p-8 shadow-2xl relative overflow-hidden backdrop-blur-md">
+            
+            <!-- Glowing top highlight line -->
+            <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 bg-[length:200%_auto] animate-[shimmer_3s_infinite_linear]"></div>
+            
+            <!-- Header Section -->
+            <div class="text-center mb-6 space-y-3">
+                <div class="w-16 h-16 rounded-2xl bg-indigo-500/15 text-indigo-400 border border-indigo-500/20 flex items-center justify-center mx-auto shadow-lg shadow-indigo-500/5">
+                    <i class="fas fa-shield-alt text-2xl animate-pulse"></i>
+                </div>
+                <div class="space-y-1">
+                    <h1 class="text-xl font-bold font-display text-white tracking-tight">{{ panel_name }}</h1>
+                    <p class="text-xs text-slate-400">Lifetime software license validation required</p>
+                </div>
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-[10px] font-bold text-indigo-400 font-display">
+                    <i class="fas fa-code-branch text-[9px]"></i>
+                    <span>Version 6.0 LTS</span>
+                </span>
+            </div>
+
+            <!-- Welcome feature overview card -->
+            <div class="bg-slate-950/60 border border-white/5 rounded-2xl p-5 space-y-4 mb-6">
+                <div class="space-y-1 text-left">
+                    <h3 class="text-xs font-bold text-indigo-400 font-display flex items-center gap-1.5">
+                        <i class="fas fa-info-circle"></i>
+                        <span>System Welcome</span>
+                    </h3>
+                    <p class="text-[11px] text-slate-400 leading-relaxed">To complete cluster deployment and enable active guest hypervisors, bind your registration key below. This is a secure one-off verification step.</p>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-[10px] font-semibold text-slate-300">
+                    <div class="flex items-center gap-2"><i class="fas fa-check-circle text-emerald-400"></i> Secure registration</div>
+                    <div class="flex items-center gap-2"><i class="fas fa-check-circle text-emerald-400"></i> Lifetime activation</div>
+                    <div class="flex items-center gap-2"><i class="fas fa-check-circle text-emerald-400"></i> Full panel capabilities</div>
+                    <div class="flex items-center gap-2"><i class="fas fa-check-circle text-emerald-400"></i> Enterprise SLA support</div>
+                </div>
+            </div>
+
+            <!-- Toast / Notifications space -->
+            <div id="alertContainer"></div>
+
+            <!-- Input Activation Form -->
+            <form id="licenseForm" onsubmit="activateLicense(event)" class="space-y-5">
+                <div class="space-y-2">
+                    <label for="licenseKey" class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider font-display">
+                        <i class="fas fa-key text-indigo-400 mr-1"></i> License Key
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                            <i class="fas fa-lock text-xs"></i>
+                        </div>
+                        <input 
+                            type="text" 
+                            id="licenseKey" 
+                            name="license_key" 
+                            placeholder="DICOT-XXXX-XXXX-XXXX-XXXX"
+                            required
+                            autocomplete="off"
+                            spellcheck="false"
+                            class="w-full pl-10 pr-4 py-3 bg-slate-950 border border-white/5 hover:border-white/10 rounded-2xl text-slate-200 text-xs font-mono tracking-wider focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 outline-none transition uppercase">
+                    </div>
+                </div>
+
+                <button type="submit" id="submitBtn" class="w-full py-3.5 text-xs font-bold rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/15 hover:shadow-indigo-600/25 transition flex items-center justify-center gap-2 cursor-pointer">
+                    <i class="fas fa-unlock text-[11px]"></i>
+                    <span>Activate License</span>
+                </button>
+            </form>
+
+            <div class="flex items-center justify-center gap-1.5 mt-5 text-[10px] text-slate-500 font-medium">
+                <i class="fas fa-shield-alt text-emerald-500"></i>
+                <span>SSL Secured 256-Bit validation channel</span>
+            </div>
+
+            <!-- Footer Details -->
+            <div class="mt-6 pt-5 border-t border-white/5 text-center text-[11px] text-slate-500 space-y-1.5">
+                <p>Made with love by <strong class="text-slate-400">HopingBoyz</strong></p>
+                <p>Encountering issues? <a href="mailto:support@dicotpanel.com" class="text-indigo-400 hover:text-indigo-300 transition underline">Contact Support</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showAlert(message, type) {
+            const container = document.getElementById('alertContainer');
+            const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+            const bgClass = type === 'success' ? 'bg-emerald-500/10 border-emerald-500/15 text-emerald-400' : 'bg-rose-500/10 border-rose-500/15 text-rose-400';
+            
+            container.innerHTML = `
+                <div class="flex items-center gap-2.5 p-3 rounded-xl border ${bgClass} text-xs mb-4 animate-[slideDown_0.2s_ease-out]">
+                    <i class="fas ${icon}"></i>
+                    <span class="font-medium">${message}</span>
+                </div>
+            `;
+
+            if (type === 'success') {
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 1800);
+            }
+        }
+
+        function activateLicense(event) {
+            event.preventDefault();
+            
+            const btn = document.getElementById('submitBtn');
+            const key = document.getElementById('licenseKey').value.trim();
+            
+            if (!key) {
+                showAlert('License key is required', 'danger');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = `
+                <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Validating Key...</span>
+            `;
+
+            fetch('/activate-license', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ license_key: key })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                } else {
+                    showAlert(data.error || 'Invalid license signature', 'danger');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-unlock text-[11px]"></i><span>Activate License</span>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('Network connectivity failed. Verify cluster connections.', 'danger');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-unlock text-[11px]"></i><span>Activate License</span>';
+            });
+        }
+    </script>
+</body>
+</html>

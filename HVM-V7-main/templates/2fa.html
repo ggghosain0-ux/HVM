@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Two-Factor Authentication - {{ panel_name }}{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-center min-h-[70vh] p-4 animate-[fadeIn_0.4s_ease-out]">
+    <div class="bg-slate-900/40 border border-white/5 rounded-3xl p-8 max-w-md w-full shadow-2xl relative overflow-hidden backdrop-blur-md">
+        <!-- Ambient glow accent -->
+        <div class="absolute -right-24 -top-24 w-64 h-64 rounded-full bg-indigo-500/5 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 space-y-6">
+            <!-- Header Shield -->
+            <div class="text-center space-y-4">
+                <div class="w-16 h-16 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center mx-auto shadow-lg shadow-indigo-500/5">
+                    <i class="fas fa-shield-alt text-2xl animate-pulse"></i>
+                </div>
+                <div class="space-y-1">
+                    <h2 class="text-lg font-bold font-display text-white">Security Verification</h2>
+                    <p class="text-xs text-slate-400">Please provide the 6-digit verification token from your preferred authenticator app.</p>
+                </div>
+            </div>
+
+            <!-- 2FA Verification Form -->
+            <form method="POST" action="{{ url_for('two_factor') }}" class="space-y-5">
+                <div class="space-y-2 text-center">
+                    <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider font-display">Verification Token</label>
+                    <input type="text" name="code" placeholder="000000" maxlength="6" pattern="[0-9]{6}" required autofocus 
+                           class="w-full text-center px-4 py-3 bg-slate-950 border border-white/5 rounded-2xl text-2xl font-bold font-mono text-white tracking-[0.75em] focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 outline-none transition placeholder-slate-800">
+                </div>
+                
+                <button type="submit" class="w-full py-3 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/15 hover:shadow-indigo-600/25 transition cursor-pointer flex items-center justify-center gap-1.5">
+                    <i class="fas fa-check"></i>
+                    <span>Verify Token</span>
+                </button>
+                
+                <div class="text-center">
+                    <a href="{{ url_for('login') }}" class="text-xs text-slate-400 hover:text-white transition inline-flex items-center gap-1">
+                        <i class="fas fa-arrow-left text-[10px]"></i>
+                        <span>Return to login</span>
+                    </a>
+                </div>
+            </form>
+
+            <!-- Interactive Help Box -->
+            <div class="p-4 bg-slate-950/60 border border-white/5 rounded-2xl text-left space-y-1.5">
+                <h4 class="text-[11px] font-bold text-slate-300 font-display flex items-center gap-1.5">
+                    <i class="fas fa-question-circle text-indigo-400"></i>
+                    <span>Lost security access?</span>
+                </h4>
+                <p class="text-[11px] text-slate-400 leading-relaxed">
+                    If you cannot access your backup security codes or authenticator app, please contact an platform administrator to request multi-factor override.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const codeInput = document.querySelector('input[name="code"]');
+    
+    // Auto-submit when 6 digits are populated
+    codeInput.addEventListener('input', function(e) {
+        if (this.value.length === 6) {
+            this.form.submit();
+        }
+    });
+    
+    // Enforce digit constraints exclusively
+    codeInput.addEventListener('keypress', function(e) {
+        const char = String.fromCharCode(e.which);
+        if (!/[0-9]/.test(char)) {
+            e.preventDefault();
+        }
+    });
+</script>
+{% endblock %}
