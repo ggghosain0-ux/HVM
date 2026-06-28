@@ -100,6 +100,7 @@ if [ ! -f ".env" ]; then
     echo "PORT=5006" >> .env
     echo "PYTHON_PORT=5005" >> .env
     echo "SECRET_KEY=\"$RANDOM_SECRET\"" >> .env
+    echo "SESSION_COOKIE_SECURE=\"false\"" >> .env
     echo "MAIN_ADMIN_USERNAME=\"admin\"" >> .env
     echo "MAIN_ADMIN_PASSWORD=\"admin123\"" >> .env
     echo "MAIN_ADMIN_EMAIL=\"admin@localhost\"" >> .env

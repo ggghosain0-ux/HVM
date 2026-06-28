@@ -177,9 +177,25 @@ prepareEnvironment();
 const proxy = createProxyMiddleware({
   target: `http://127.0.0.1:${PYTHON_PORT}`,
   changeOrigin: true,
+  xfwd: true, // Auto-generate X-Forwarded-For, X-Forwarded-Proto, X-Forwarded-Port headers
   ws: true, // Enable WebSocket proxying for Socket.IO console, etc.
   logger: console,
   on: {
+    proxyReq: (proxyReq, req: any) => {
+      // Forward protocol securely
+      const proto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+      proxyReq.setHeader('X-Forwarded-Proto', proto);
+      
+      // Forward host correctly
+      const host = req.headers['x-forwarded-host'] || req.headers['host'] || '';
+      proxyReq.setHeader('X-Forwarded-Host', host);
+      
+      // Forward port correctly
+      const port = req.headers['x-forwarded-port'] || '';
+      if (port) {
+        proxyReq.setHeader('X-Forwarded-Port', port);
+      }
+    },
     error: (err: any, req, res: any) => {
       if (err.code === 'ECONNREFUSED' || err.code === 'EPIPE' || err.code === 'ECONNRESET') {
         console.warn(`[Proxy Connection Handled] Backend not ready or connection reset (${err.code}).`);
